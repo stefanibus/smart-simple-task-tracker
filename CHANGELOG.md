@@ -2,7 +2,7 @@
 
 All notable changes to Smart Task Tracker will be documented in this file.
 
-## [Unreleased]
+## [Unreleased] 
 
 ### Added
 - Initial repository setup
@@ -25,5 +25,5 @@ All notable changes to Smart Task Tracker will be documented in this file.
 - Chrome Tab Group integration
 - URL parameter sharing
 - Responsive design
-- Documentation modal
+- Documentation modal added
 
