@@ -2,7 +2,7 @@
 
 A distributed single-task system designed for focused work with Chrome Tab Groups.
 
-## Architecture Overview
+## Architecture Overview 
 
 - **One STT per Chrome Tab Group**: Each tab group represents one topic/project
 - **Cross-tab Communication**: Real-time sync via localStorage event bus

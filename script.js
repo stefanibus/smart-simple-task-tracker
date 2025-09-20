@@ -10,7 +10,7 @@ const generateWindowId = () => {
     return urlWinId;
   }
 
-  // If hash exists but not in URL params, sync them
+  // If hash exists but not in URL params, sync them 
   if (window.location.hash) {
     const hashId = window.location.hash.substring(1);
     const tempURL = new URL(window.location);
