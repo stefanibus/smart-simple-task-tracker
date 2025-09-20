@@ -1,0 +1,809 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 90vw;
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #333;
+  min-height: 100vh;
+}
+
+/* Add this to your CSS file */
+body.future-task {
+  opacity: 0.15;
+  transition: opacity 0.3s ease;
+}
+
+/* Ensure the dimming doesn't affect readability of other elements */
+body.future-task .container {
+  opacity: 1; /* Keep content at full opacity */
+}
+
+
+.container {
+  background-color: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+h1 {
+  color: #2c3e50;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #eee;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 7em;
+}
+
+h1:empty:before {
+  content: 'type your Topic/Task...';
+  color: #aaa;
+  font-style: italic;
+}
+
+.input-group {
+  margin: 25px 0;
+  position: relative;
+}
+
+label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 18px;
+}
+
+.title-with-date {
+  position: relative;
+}
+
+textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 18px;
+  background-color: #69293b;
+  color: white;
+  resize: none;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+#enterNewTitle {
+  min-height: 150px;
+}
+
+#enterNewDetails {
+  min-height: 100px;
+}
+
+textarea:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+  background-color: #7a3145;
+}
+
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.date-picker-container {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+@media (max-width: 600px) {
+  .date-picker-container {
+    position: static;
+    margin-top: 10px;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  /* Add specific styling for the clear button on mobile */
+  .date-picker-container button {
+    margin-left: 10px;
+  }
+}
+#taskDueDate {
+  width: 100px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 10px;
+  background: white;
+  opacity: 0.2;
+}
+
+.days-indicator {
+  font-size: 17px;
+  min-width: 60px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: #4ecdc4;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.days-indicator.past {
+  background: #ffe6e6;
+  color: #e74c3c;
+}
+
+/* Dynamic scaling based on days difference */
+.days-indicator[data-days='0'] {
+  transform: scale(1);
+  background: #ff6b6b;
+}
+
+.days-indicator[data-days='-1'] {
+  transform: scale(1.1);
+  background: #ff9e6b;
+}
+
+.days-indicator[data-days='-7'] {
+  transform: scale(2);
+  background: #ff4757;
+}
+
+.days-indicator[data-days='1'] {
+  transform: scale(0.9);
+  background: #4ecdc4;
+}
+
+.days-indicator[data-days='7'] {
+  transform: scale(0.5);
+  background: #1dd1a1;
+}
+
+/* Limit scaling to your specified range */
+.days-indicator {
+  min-width: 60px;
+  max-width: 300px;
+  transform-origin: center;
+}
+
+.counter {
+  text-align: right;
+  margin-top: 8px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.counter.near-limit {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+/* Session Management Styles */
+.session-management {
+  margin-top: 30px;
+  border-top: 2px solid #eee;
+  padding-top: 20px;
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.session-title[style*="italic"] {
+  font-style: italic !important;
+  color: #888 !important;
+}
+
+.session-title[style*="italic"]::before {
+  content: "[Untitled] ";
+  color: #ccc;
+  margin-right: 5px;
+}
+
+
+#lastBackupInfo {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+#lastBackupInfo.warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+}
+
+#lastBackupInfo.success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+
+
+.refresh-status {
+  font-size: 0.9em;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.refresh-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.session-list {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f9f9f9;
+}
+
+.tasks-section {
+  margin-bottom: 20px;
+}
+
+.tasks-section h4 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.future-tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.session-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+/* Add these styles to your CSS file */
+
+/* Future tasks (not due yet) - Dimmed with blue border */
+.session-item.future-task {
+  opacity: 0.7;
+  background-color: #f8f9fa;
+  border-left: 4px solid #4ecdc4;
+}
+
+/* Current & Past due tasks - Yellow highlight */
+.session-item.current-or-past {
+  background-color: #fff9db; /* Light yellow */
+  border-left: 4px solid #ffd43b; /* Yellow border */
+}
+
+/* No due date - Neutral style */
+.session-item.no-date {
+  border-left: 4px solid #ced4da; /* Gray border */
+}
+
+/* Visual indicator for future tasks */
+.future-task-indicator {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+  background: #4ecdc4;
+  color: white;
+}
+
+/* Visual indicator for current/past tasks */
+.urgent-indicator {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+  background: #ffd43b;
+  color: #333;
+}
+.future-task-item {
+  display: inline-block;
+  max-width: 80px;
+  overflow: hidden;
+  transform: scale(0.7);
+  transform-origin: top left;
+  background: #808080;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: default;
+}
+
+.future-task-item h3 {
+  font-size: 1em !important;
+  margin: 0;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-item:last-child {
+  border-bottom: none;
+}
+
+.session-content {
+  flex: 1;
+  margin-right: 15px;
+}
+
+.session-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.session-details {
+  font-size: 0.9em;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+.session-date {
+  font-size: 0.8em;
+  color: #e74c3c;
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.session-action {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.session-action.view {
+  background: #2ecc71;
+}
+
+.no-sessions {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+.backup-section {
+  margin-top: 15px;
+  padding: 15px;
+  background: #edf2f7;
+  border-radius: 8px;
+  border-left: 4px solid #9b59b6;
+}
+
+.backup-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.backup-btn {
+  background: #9b59b6;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.backup-btn.save {
+  background: #27ae60;
+}
+
+.backup-status {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+
+/* Add to your CSS */
+.storage-warning {
+  background: #fff3cd !important;
+  border: 1px solid #ffeaa7 !important;
+  color: #856404 !important;
+}
+
+.storage-critical {
+  background: #f8d7da !important;
+  border: 1px solid #f5c6cb !important;
+  color: #721c24 !important;
+  font-weight: bold !important;
+}
+
+/* Add to your CSS */
+#duplicateWarning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 14px;
+  transition: opacity 0.5s ease;
+}
+
+#duplicateWarning strong {
+  color: #856404;
+}
+
+
+
+#duplicateWarning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 14px;
+  max-height: 200px;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+#duplicateWarning ul {
+  margin: 5px 0 5px 20px;
+}
+
+#duplicateWarning li {
+  margin: 2px 0;
+}
+
+
+
+@media (max-width: 768px) {
+  body {
+    padding: 6px;
+    max-width: 100%;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+    padding-top: 25px;
+  }
+
+  textarea {
+    font-size: 16px;
+  }
+
+  .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .session-content {
+    margin-right: 10px;
+  }
+
+  .session-details {
+    max-width: 200px;
+  }
+
+  .backup-buttons {
+    flex-direction: column;
+  }
+
+  .date-picker-container {
+    position: static;
+    margin-top: 10px;
+    justify-content: flex-end;
+  }
+}
+
+/* Responsive improvements for small screens */
+@media (max-width: 480px) {
+  .session-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .session-actions {
+    align-self: flex-end;
+  }
+
+  .session-details {
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .future-tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  }
+}
+
+@media (max-width: 320px) {
+  .session-content {
+    margin-right: 5px;
+  }
+
+  .session-details {
+    max-width: 180px;
+  }
+
+  .session-actions {
+    gap: 5px;
+  }
+
+  .session-action {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
+
+  .future-tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  }
+}
+
+.highlight {
+  animation: highlight 2s ease;
+}
+
+@keyframes highlight {
+  0% {
+    background-color: #a8e6cf;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+#docsToggle {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 1000;
+  /*  background: #2c3e50; */
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#docsModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: auto; /* Single scrollbar on the modal */
+  display: none; /* Hidden by default, toggled by JS */
+}
+
+#docsModal .docs-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  padding: 10px;
+  width: 100%;
+  /* Removed overflow:auto to prevent nested scrollbar */
+}
+
+#docsModal .docs-container h1 {
+  color: #2c3e50;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 0.5rem; /* Using rem for responsive spacing */
+  margin-top: 0;
+  text-align: center;
+  font-size: 2.5rem; /* Responsive font size using rem */
+  margin-bottom: 1.5rem;
+}
+
+#docsModal .docs-container h2 {
+  color: #3498db;
+  margin-top: 1.5rem; /* Using rem for responsive spacing */
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+  font-size: 1.8rem; /* Responsive font size */
+}
+
+#docsModal .docs-container h3 {
+  color: #2c3e50;
+  margin-top: 1.25rem;
+  font-size: 1.4rem; /* Responsive font size */
+}
+
+#docsModal .docs-container ul {
+  padding-left: 1.5rem;
+}
+
+#docsModal .docs-container li {
+  margin-bottom: 0.75rem;
+  font-size: 1rem; /* Base font size */
+}
+
+#docsModal .docs-container .core-concept {
+  background: #f0f7ff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  border-left: 5px solid #3498db;
+}
+
+#docsModal .docs-container .feature-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+#docsModal .docs-container .feature-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid #3498db;
+}
+
+#docsModal .docs-container .key-combo {
+  display: inline-block;
+  background: #2c3e50;
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin: 0 0.2rem;
+}
+
+#docsModal .docs-container .highlight {
+  background: #e3f2fd;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+#docsModal .docs-container .tip {
+  background: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 4px 4px 0;
+}
+
+#docsModal .docs-container .code {
+  font-family: monospace;
+  background: #f5f5f5;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+#docsModal .docs-container .emphasis {
+  font-weight: 600;
+  color: #2c3e50;
+  background: #fff4e6;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+#docsModal .docs-container .center-text {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+#docsModal .docs-container .summary {
+  background: #2c3e50;
+  color: white;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+#docsModal .docs-container .summary h2 {
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #docsModal {
+    padding: 15px;
+    max-width: 95vw;
+    max-height: 85vh;
+  }
+
+  #docsModal .docs-container h1 {
+    font-size: 2rem;
+  }
+
+  #docsModal .docs-container h2 {
+    font-size: 1.5rem;
+  }
+
+  #docsModal .docs-container h3 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #docsModal .docs-container h1 {
+    font-size: 1.75rem;
+  }
+
+  #docsModal .docs-container h2 {
+    font-size: 1.3rem;
+  }
+
+  #docsModal .docs-container {
+    padding: 5px;
+  }
+}
