@@ -44,6 +44,17 @@ function autoExpand(textarea) {
   textarea.style.height = textarea.scrollHeight + 'px'; // Expand to content
 }
 
+
+function calculateTotalStorageSize() {
+  let totalSize = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const value = localStorage.getItem(key);
+    totalSize += key.length + (value ? value.length : 0); // REMOVE the * 2 // // No *2 needed
+  }
+  return totalSize;
+}
+
 function updateLastBackupDisplay(timestamp) {
   // console.log('updateLastBackupDisplay called');
 
@@ -102,12 +113,28 @@ function updateLastBackupDisplay(timestamp) {
     color: ${diffHours >= 24 ? '#856404' : '#155724'};
   `;
 
+
+
+
+
+  
+
+
+
+  // Add storage info to backup display
+  const storageSize = calculateTotalStorageSize();
+  const storageMB = (storageSize / (1024 * 1024)).toFixed(2);
+
+
+
   const formattedDate = backupDate.toLocaleString();
   backupInfo.innerHTML = `
     <strong>Last backup:</strong> ${formattedDate}<br>
     <small>(${ageMessage})</small>
+    <br><small>Current storage: ${storageMB} MB / 5 MB</small>
     ${diffHours >= 24 ? '<br>⚠️ Backup is over 24 hours old' : ''}
   `;
+
 
   // Add to backup section
   backupSection.appendChild(backupInfo);
@@ -119,7 +146,7 @@ function updateLastBackupDisplay(timestamp) {
     showBackupWarning(diffHours);
   }
 }
- 
+
 
 
 function showBackupWarning(hoursOld) {
@@ -146,6 +173,108 @@ function showBackupWarning(hoursOld) {
     localStorage.setItem('lastBackupWarning', now.toString());
   }
 }
+
+
+
+
+
+
+function checkStorageRegularly() {
+
+  // TEST: Change to 0.1% instead of 85% for easy testing  stefano 
+    const TEST_THRESHOLD = 0.1; // 0.1% instead of 85%
+  
+    // Check storage every 5 minutes
+    setInterval(() => {
+      const totalSize = calculateTotalStorageSize();
+      const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
+      // alert(usagePercentage);
+  
+      if (usagePercentage > TEST_THRESHOLD) {
+        // Update stats display with warning
+        showSimpleStats();
+      }
+    }, 5000); // 5 minutes = 300000
+  }
+  
+
+
+  function showStorageWarning(usagePercentage, totalSizeMB) {
+    // Only show alert once per session to avoid annoying users
+    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+    const now = new Date().getTime();
+
+    if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
+      alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
+      localStorage.setItem('lastStorageWarning', now.toString());
+    }
+  }
+
+
+
+
+  function showSimpleStats() {
+    // Remove existing stats if any
+    const existingStats = document.getElementById('taskStats');
+    if (existingStats) {
+      existingStats.remove();
+    }
+  
+    const sessions = [];
+    
+  // USE THE CORRECTED FUNCTION INSTEAD OF MANUAL CALCULATION
+  const totalSize = calculateTotalStorageSize(); 
+  
+    // Count sessions separately if needed
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('pageTitle_win_')) {
+        sessions.push(key);
+      }
+    }
+    
+  const totalSizeKB = (totalSize / 1024).toFixed(2);
+  const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+  const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
+ 
+     
+  
+    const statsElement = document.createElement('div');
+    statsElement.id = 'taskStats';
+    statsElement.style.cssText = `
+        font-size: 12px;
+        color: #666;
+        margin-top: 10px;
+        text-align: center;
+        padding: 10px;
+        border-top: 1px solid #eee;
+        background: ${usagePercentage > 80 ? '#fff3cd' : '#f8f9fa'};
+        border-radius: 4px;
+      `;
+  
+    let sizeMessage = `Total tasks: ${sessions.length} | Storage: ${totalSizeKB} KB`;
+    if (usagePercentage > 60) {
+      sizeMessage += ` | ⚠️ ${usagePercentage}% of 5MB limit`;
+    }
+  
+    statsElement.innerHTML = `
+        <div>${sizeMessage}</div>
+        ${usagePercentage > 80 ? '<div style="color: #dc3545; font-weight: bold; margin-top: 5px;">⚠️ Storage limit approaching!</div>' : ''}
+      `;
+  
+    // Add to session management section
+    const sessionManagement = document.querySelector('.session-management');
+    sessionManagement.appendChild(statsElement);
+  
+    // Show warning alert if critically close to limit
+    if (usagePercentage > 90) {
+      showStorageWarning(usagePercentage, totalSizeMB);
+    }
+  
+    return totalSize;
+  }
+  
+  
 
 // Main initialization when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
@@ -305,20 +434,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
 
-
-  function checkStorageRegularly() {
-    // Check storage every 5 minutes
-    setInterval(() => {
-      const totalSize = calculateTotalStorageSize();
-      const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-      // alert(usagePercentage);
-
-      if (usagePercentage > 85) {
-        // Update stats display with warning
-        showSimpleStats();
-      }
-    }, 300000); // 5 minutes
-  }
 
 
 
@@ -935,17 +1050,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-  function calculateTotalStorageSize() {
-    let totalSize = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      totalSize += key.length * 2 + (value ? value.length * 2 : 0);
-    }
-    return totalSize;
-  }
-
-
 
 
   // Load backup data from file
@@ -1144,90 +1248,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  function showSimpleStats() {
-    // Remove existing stats if any
-    const existingStats = document.getElementById('taskStats');
-    if (existingStats) {
-      existingStats.remove();
-    }
 
-    const sessions = [];
-    let totalSize = 0;
-
-    // Calculate total storage usage
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.startsWith('pageTitle_win_')) {
-        sessions.push(key);
-      }
-
-      // Calculate size of each item (2 bytes per character for UTF-16)
-      const value = localStorage.getItem(key);
-      totalSize += key.length * 2 + (value ? value.length * 2 : 0);
-    }
-
-    // const totalSizeKB = (totalSize / 1024).toFixed(2);    
-    const totalSizeKB = 4000000000;
-    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-    const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-
-    const statsElement = document.createElement('div');
-    statsElement.id = 'taskStats';
-    statsElement.style.cssText = `
-      font-size: 12px;
-      color: #666;
-      margin-top: 10px;
-      text-align: center;
-      padding: 10px;
-      border-top: 1px solid #eee;
-      background: ${usagePercentage > 80 ? '#fff3cd' : '#f8f9fa'};
-      border-radius: 4px;
-    `;
-
-    let sizeMessage = `Total tasks: ${sessions.length} | Storage: ${totalSizeKB} KB`;
-    if (usagePercentage > 60) {
-      sizeMessage += ` | ⚠️ ${usagePercentage}% of 5MB limit`;
-    }
-
-    statsElement.innerHTML = `
-      <div>${sizeMessage}</div>
-      ${usagePercentage > 80 ? '<div style="color: #dc3545; font-weight: bold; margin-top: 5px;">⚠️ Storage limit approaching!</div>' : ''}
-    `;
-
-    // Add to session management section
-    const sessionManagement = document.querySelector('.session-management');
-    sessionManagement.appendChild(statsElement);
-
-    // Show warning alert if critically close to limit
-    if (usagePercentage > 90) {
-      showStorageWarning(usagePercentage, totalSizeMB);
-    }
-
-    return totalSize;
-  }
-
-  function showStorageWarning(usagePercentage, totalSizeMB) {
-    alert('run showStorageWarning')
-    // Only show alert once per session to avoid annoying users
-    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
-    const now = new Date().getTime();
-
-    if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
-      alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
-      localStorage.setItem('lastStorageWarning', now.toString());
-    }
-  }
-
-  // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
-  // This must be after all DOM elements are fully loaded
-  updateLastBackupDisplay();
 
 
   // checkStorageRegularly 
   checkStorageRegularly();
 
-});
+  // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
+  // This must be after all DOM elements are fully loaded
+  updateLastBackupDisplay();
 
+});
 
 // ===== MODAL FUNCTIONALITY START =====
 const docsToggle = document.getElementById('docsToggle');
@@ -1251,5 +1282,5 @@ if (docsToggle && docsModal) {
     }
   });
 }
-  // ===== MODAL FUNCTIONALITY END =====
- 
+// ===== MODAL FUNCTIONALITY END =====
+
