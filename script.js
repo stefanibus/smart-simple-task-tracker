@@ -449,7 +449,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Clear indicator if no valid date, show "always relevant"
     if (!date || isNaN(date.getTime())) {
       dueDateInput.value = '';
-      daysIndicator.textContent = 'Always relevant';
+      daysIndicator.textContent = 'Always relevant'; 
+      document.body.classList.remove('future-task');
       daysIndicator.classList.remove('past');
       const clearButton = document.querySelector(
         '.date-picker-container button'
@@ -526,7 +527,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Refresh sessions to update the display
       loadSessions();
-      updateBodyOpacityBasedOnDueDate(); // Add this line
     });
 
     // Add the button to the date container
