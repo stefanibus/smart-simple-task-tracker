@@ -45,26 +45,26 @@ function autoExpand(textarea) {
 }
 
 function updateLastBackupDisplay(timestamp) {
-  console.log('updateLastBackupDisplay called');
+  // console.log('updateLastBackupDisplay called');
   
   // Remove existing display if any
   const existingDisplay = document.getElementById('lastBackupInfo');
   if (existingDisplay) {
-    console.log('Removing existing backup display');
+   // console.log('Removing existing backup display');
     existingDisplay.remove();
   }
 
   if (!timestamp) {
     timestamp = localStorage.getItem('lastBackupTimestamp');
-    console.log('Retrieved timestamp from localStorage:', timestamp);
+   // console.log('Retrieved timestamp from localStorage:', timestamp);
     if (!timestamp) {
-      console.log('No backup timestamp found');
+     // console.log('No backup timestamp found');
       return; // No backup recorded
     }
   }
 
   const backupSection = document.querySelector('.backup-section');
-  console.log('Backup section found:', !!backupSection);
+ // console.log('Backup section found:', !!backupSection);
   
   if (!backupSection) {
     console.warn('Backup section not found in DOM');
@@ -87,13 +87,7 @@ function updateLastBackupDisplay(timestamp) {
     ageMessage = `${diffDays} days ago`;
   }
 
-  console.log('Backup age calculations:', { 
-    backupDate, 
-    now, 
-    diffHours, 
-    diffDays,
-    isOver24Hours: diffHours >= 24
-  });
+//  console.log('Backup age calculations:', {  backupDate,      now,      diffHours,      diffDays,     isOver24Hours: diffHours >= 24   });
 
   // Create display element
   const backupInfo = document.createElement('div');
@@ -117,11 +111,11 @@ function updateLastBackupDisplay(timestamp) {
 
   // Add to backup section
   backupSection.appendChild(backupInfo);
-  console.log('Backup info element added to DOM');
+  // console.log('Backup info element added to DOM');
 
   // ⭐ FIXED: Show alert only if truly older than 24 hours
   if (diffHours >= 24) {
-    console.log('Showing backup warning - over 24 hours old');
+   // console.log('Showing backup warning - over 24 hours old');
     showBackupWarning(diffHours);
   }
 
