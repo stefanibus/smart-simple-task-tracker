@@ -1,0 +1,7 @@
+{
+    "installDependencies": true,
+    "startCommand": "npm install && npm start", 
+    "env": {
+      "NODE_ENV": "development"
+    }
+  }

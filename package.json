@@ -1,0 +1,14 @@
+{
+    "name": "static-project",
+    "version": "1.0.0",
+    "description": "Static project with live reload",
+    "scripts": {
+      "start": "servor --reload",
+      "dev": "servor --reload"
+    },
+    "dependencies": {
+      "servor": "^4.0.2"
+    },
+    "stackblitz": {
+      "startCommand": "npm install && npm start"
+}
