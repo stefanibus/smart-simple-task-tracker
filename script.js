@@ -46,26 +46,26 @@ function autoExpand(textarea) {
 
 function updateLastBackupDisplay(timestamp) {
   // console.log('updateLastBackupDisplay called');
-  
+
   // Remove existing display if any
   const existingDisplay = document.getElementById('lastBackupInfo');
   if (existingDisplay) {
-   // console.log('Removing existing backup display');
+    // console.log('Removing existing backup display');
     existingDisplay.remove();
   }
 
   if (!timestamp) {
     timestamp = localStorage.getItem('lastBackupTimestamp');
-   // console.log('Retrieved timestamp from localStorage:', timestamp);
+    // console.log('Retrieved timestamp from localStorage:', timestamp);
     if (!timestamp) {
-     // console.log('No backup timestamp found');
+      // console.log('No backup timestamp found');
       return; // No backup recorded
     }
   }
 
   const backupSection = document.querySelector('.backup-section');
- // console.log('Backup section found:', !!backupSection);
-  
+  // console.log('Backup section found:', !!backupSection);
+
   if (!backupSection) {
     console.warn('Backup section not found in DOM');
     return;
@@ -73,12 +73,12 @@ function updateLastBackupDisplay(timestamp) {
 
   const backupDate = new Date(timestamp);
   const now = new Date();
-  
+
   // ⭐ FIXED: Calculate actual hours difference instead of calendar days
   const diffTime = now - backupDate;
   const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   // Use exact hours for more precise messaging
   let ageMessage = '';
   if (diffHours < 24) {
@@ -87,7 +87,7 @@ function updateLastBackupDisplay(timestamp) {
     ageMessage = `${diffDays} days ago`;
   }
 
-//  console.log('Backup age calculations:', {  backupDate,      now,      diffHours,      diffDays,     isOver24Hours: diffHours >= 24   });
+  //  console.log('Backup age calculations:', {  backupDate,      now,      diffHours,      diffDays,     isOver24Hours: diffHours >= 24   });
 
   // Create display element
   const backupInfo = document.createElement('div');
@@ -115,24 +115,22 @@ function updateLastBackupDisplay(timestamp) {
 
   // ⭐ FIXED: Show alert only if truly older than 24 hours
   if (diffHours >= 24) {
-   // console.log('Showing backup warning - over 24 hours old');
+    // console.log('Showing backup warning - over 24 hours old');
     showBackupWarning(diffHours);
   }
-
-
-  
 }
+ 
 
 
 function showBackupWarning(hoursOld) {
   // Only show alert once per session to avoid annoying users
   const lastWarning = localStorage.getItem('lastBackupWarning');
   const now = new Date().getTime();
-  
+
   // Convert hours to days for better message
   const daysOld = Math.floor(hoursOld / 24);
   const remainingHours = hoursOld % 24;
-  
+
   let timeMessage;
   if (daysOld > 0) {
     timeMessage = `${daysOld} day${daysOld !== 1 ? 's' : ''}`;
@@ -142,7 +140,7 @@ function showBackupWarning(hoursOld) {
   } else {
     timeMessage = `${hoursOld} hours`;
   }
-  
+
   if (!lastWarning || (now - parseInt(lastWarning)) > 3600000) { // 1 hour cooldown
     alert(`⚠️ Backup Warning\n\nYour last backup was ${timeMessage} old. Consider creating a new backup to protect your data.`);
     localStorage.setItem('lastBackupWarning', now.toString());
@@ -218,8 +216,8 @@ document.addEventListener('DOMContentLoaded', function () {
       // FIX: Refresh task list to show updated date immediately
       loadSessions();
       lastRefreshTime = Date.now();
-      updateRefreshStatus();     
-      updateBodyOpacityBasedOnDueDate();  
+      updateRefreshStatus();
+      updateBodyOpacityBasedOnDueDate();
     },
   });
 
@@ -227,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
   addClearDateButton();
 
   updateBodyOpacityBasedOnDueDate(); // Add this line
- 
+
 
 
 
@@ -286,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Add due date to URL from localStorage (not input field)
     // Handle due date - use "0" for no date
     const dueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
-    
+
     // Only include dueDate in URL if it has a valid value
     // We remove the parameter entirely when empty for cleaner URLs
     if (dueDate && dueDate !== '0') {
@@ -308,14 +306,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-
-  
   function checkStorageRegularly() {
     // Check storage every 5 minutes
     setInterval(() => {
       const totalSize = calculateTotalStorageSize();
       const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-      
+      // alert(usagePercentage);
+
       if (usagePercentage > 85) {
         // Update stats display with warning
         showSimpleStats();
@@ -414,10 +411,10 @@ document.addEventListener('DOMContentLoaded', function () {
       loadSessions();
       lastRefreshTime = Date.now();
       updateRefreshStatus();
-    }, TIMEOUTS.KEYSTROKE_REFRESH);  
+    }, TIMEOUTS.KEYSTROKE_REFRESH);
   });
 
- 
+
   // Details textarea input listener (same pattern as title)
   detailsTextarea.addEventListener('input', function () {
     autoExpand(this);
@@ -449,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Clear indicator if no valid date, show "always relevant"
     if (!date || isNaN(date.getTime())) {
       dueDateInput.value = '';
-      daysIndicator.textContent = 'Always relevant'; 
+      daysIndicator.textContent = 'Always relevant';
       document.body.classList.remove('future-task');
       daysIndicator.classList.remove('past');
       const clearButton = document.querySelector(
@@ -480,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
       daysIndicator.textContent = `${Math.abs(diffDays)} days ago`;
       daysIndicator.classList.add('past');
     }
-    
+
     updateBodyOpacityBasedOnDueDate(); // Add this line
   }
 
@@ -510,9 +507,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	        margin-left: 5px;
 	        font-size: 12px;
 	        line-height: 1;
-	        display: ${
-            dueDateInput.value && dueDateInput.value !== '0' ? 'none' : 'block'
-          }; // Show only if date exists
+	        display: ${dueDateInput.value && dueDateInput.value !== '0' ? 'none' : 'block'
+      }; // Show only if date exists
 	    `;
 
     clearButton.addEventListener('click', function () {
@@ -629,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateDetailsCounter() {
     const length = detailsTextarea.value.length;
     detailsCounter.textContent = `${length}/600 characters`;
-  
+
     // Add warning style when approaching character limit
     if (length > 580) {  // Warn when 20 characters remaining
       detailsCounter.classList.add('near-limit');
@@ -643,12 +639,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const sessions = [];
     const currentWindowId = windowId;
     const processedWindows = new Set(); // Track windows we've already processed
-  
+
     // Scan through all localStorage items to find ANY task data
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       let windowId = null;
-  
+
       // Check for any type of task data
       if (key.startsWith('pageTitle_win_')) {
         windowId = key.replace('pageTitle_win_', '');
@@ -659,24 +655,24 @@ document.addEventListener('DOMContentLoaded', function () {
       } else if (key.startsWith('timestamp_pageTitle_win_')) {
         windowId = key.replace('timestamp_pageTitle_win_', '');
       }
-  
+
       // Skip if not a task key or already processed
       if (!windowId || windowId === currentWindowId || processedWindows.has(windowId)) {
         continue;
       }
-  
+
       processedWindows.add(windowId);
-  
+
       // Get all data for this window
       const title = localStorage.getItem(`pageTitle_win_${windowId}`) || '';
       const details = localStorage.getItem(`details_win_${windowId}`) || '';
       const dueDate = localStorage.getItem(`dueDate_win_${windowId}`) || '';
-  
+
       // Include sessions with ANY content
       if (title || details || (dueDate && dueDate !== '0')) {
         const timestampKey = `timestamp_pageTitle_win_${windowId}`;
         const timestamp = localStorage.getItem(timestampKey);
-  
+
         sessions.push({
           windowId: windowId,
           title: title,
@@ -686,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     }
-  
+
     // Display the collected sessions
     displaySessions(sessions);
     showSimpleStats();
@@ -734,43 +730,43 @@ document.addEventListener('DOMContentLoaded', function () {
       if (session.dueDate && session.dueDate !== '0') {
         dueDateText = `<div class="session-date">Due: ${session.dueDate}</div>`;
       }
- 
-    // ⭐ NEW: Determine task status for styling
-    let taskStatus = '';
-    let statusIndicator = '';
 
-    
-    if (session.dueDate && session.dueDate !== '0') {
-      const dueDate = new Date(session.dueDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      dueDate.setHours(0, 0, 0, 0);
-      
-      const diffTime = dueDate - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays > 0) {
-        // Future tasks
-        taskStatus = 'future-task';
-        statusIndicator = `<span class="future-task-indicator">in ${diffDays} days</span>`;
-      } else {
-        // Today or past due (both get yellow treatment)
-        taskStatus = 'current-or-past';
-        if (diffDays === 0) {
-          statusIndicator = `<span class="urgent-indicator">today</span>`;
+      // ⭐ NEW: Determine task status for styling
+      let taskStatus = '';
+      let statusIndicator = '';
+
+
+      if (session.dueDate && session.dueDate !== '0') {
+        const dueDate = new Date(session.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+
+        const diffTime = dueDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 0) {
+          // Future tasks
+          taskStatus = 'future-task';
+          statusIndicator = `<span class="future-task-indicator">in ${diffDays} days</span>`;
         } else {
-          statusIndicator = `<span class="urgent-indicator">${Math.abs(diffDays)} days ago</span>`;
+          // Today or past due (both get yellow treatment)
+          taskStatus = 'current-or-past';
+          if (diffDays === 0) {
+            statusIndicator = `<span class="urgent-indicator">today</span>`;
+          } else {
+            statusIndicator = `<span class="urgent-indicator">${Math.abs(diffDays)} days ago</span>`;
+          }
         }
       }
-    }
 
 
       // ⭐⭐ MODIFIED: Handle empty titles
       const displayTitle = session.title || 'Untitled Task';
       const displayDetails = session.details || 'No details';
-      
-        // Build session item HTML
-    
+
+      // Build session item HTML
+
       // Build session item HTML
       html += `<div class="session-item ${taskStatus}">
       <div class="session-content">
@@ -789,7 +785,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <button class="session-action delete" onclick="deleteSession('${session.windowId}', '${escapeHtmlForJsString(displayTitle)}')"  
                         title="Delete task">🗑️</button>
                 </div>
-            </div>`; 
+            </div>`;
     });
     // Update the session list UI
     sessionList.innerHTML = html;
@@ -799,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Add this function to update body class based on due date status
   function updateBodyOpacityBasedOnDueDate() {
     const daysIndicator = document.getElementById('daysIndicator');
-    
+
     if (daysIndicator && !daysIndicator.classList.contains('past')) {
       // If days indicator exists and doesn't have 'past' class, it's a future task
       document.body.classList.add('future-task');
@@ -822,58 +818,50 @@ document.addEventListener('DOMContentLoaded', function () {
       tabs: {},
     };
 
-      // Add storage info to backup data
-  const storageInfo = {
-    totalItems: localStorage.length,
-    estimatedSize: calculateTotalStorageSize(),
-    backupDate: new Date().toISOString()
-  };
-  
-  backupData.storageInfo = storageInfo;
-  
-        // Define what data patterns to include in backup
-        const keyPatterns = [
-          { pattern: 'pageTitle_win_', property: 'title' },
-          { pattern: 'details_win_', property: 'details' },
-          { pattern: 'timestamp_pageTitle_win_', property: 'titleTimestamp' },
-          { pattern: 'timestamp_details_win_', property: 'detailsTimestamp' },
-          { pattern: 'dueDate_win_', property: 'dueDate' }, // Include due date keys
-        ];
+    // Add storage info to backup data
+    const storageInfo = {
+      totalItems: localStorage.length,
+      estimatedSize: calculateTotalStorageSize(),
+      backupDate: new Date().toISOString()
+    };
 
-        function calculateTotalStorageSize() {
-          let totalSize = 0;
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const value = localStorage.getItem(key);
-            totalSize += key.length * 2 + (value ? value.length * 2 : 0);
-          }
-          return totalSize;
-        }
+    backupData.storageInfo = storageInfo;
 
-  // Initialize every tab with all fields (empty if no data)
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const keyInfo = keyPatterns.find(info => key.startsWith(info.pattern));
-    if (!keyInfo) continue;
+    // Define what data patterns to include in backup
+    const keyPatterns = [
+      { pattern: 'pageTitle_win_', property: 'title' },
+      { pattern: 'details_win_', property: 'details' },
+      { pattern: 'timestamp_pageTitle_win_', property: 'titleTimestamp' },
+      { pattern: 'timestamp_details_win_', property: 'detailsTimestamp' },
+      { pattern: 'dueDate_win_', property: 'dueDate' }, // Include due date keys
+    ];
 
-    const windowId = key.replace(keyInfo.pattern, '');
-    
-    if (!backupData.tabs[windowId]) {
-      // Initialize with all required fields as empty strings
-      backupData.tabs[windowId] = {
-        id: windowId,
-        title: '',
-        details: '',
-        titleTimestamp: '',
-        detailsTimestamp: '',
-        dueDate: ''
-      };
+
+
+    // Initialize every tab with all fields (empty if no data)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const keyInfo = keyPatterns.find(info => key.startsWith(info.pattern));
+      if (!keyInfo) continue;
+
+      const windowId = key.replace(keyInfo.pattern, '');
+
+      if (!backupData.tabs[windowId]) {
+        // Initialize with all required fields as empty strings
+        backupData.tabs[windowId] = {
+          id: windowId,
+          title: '',
+          details: '',
+          titleTimestamp: '',
+          detailsTimestamp: '',
+          dueDate: ''
+        };
+      }
+
+      // Fill in actual values (will keep empty strings if no data)
+      const value = localStorage.getItem(key) || '';
+      backupData.tabs[windowId][keyInfo.property] = value;
     }
-
-    // Fill in actual values (will keep empty strings if no data)
-    const value = localStorage.getItem(key) || '';
-    backupData.tabs[windowId][keyInfo.property] = value;
-  }
 
 
 
@@ -890,21 +878,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Initialize tab object if it doesn't exist
       if (!backupData.tabs[windowId]) {
-        backupData.tabs[windowId] = { 
+        backupData.tabs[windowId] = {
           id: windowId,
           title: '',
           details: '',
           titleTimestamp: '',
           detailsTimestamp: '',
           dueDate: ''
-        }; 
-
-         
+        };
 
 
-    }
 
-      
+
+      }
+
+
       // Store the value using the mapped property name
       backupData.tabs[windowId][keyInfo.property] =
         localStorage.getItem(key) || '';
@@ -914,9 +902,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const dataStr = JSON.stringify(backupData, null, 2); // Pretty-print JSON
     const dataUri =
       'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `tasks-backup-${
-      new Date().toISOString().split('T')[0]
-    }.json`;
+    const exportFileDefaultName = `tasks-backup-${new Date().toISOString().split('T')[0]
+      }.json`;
 
     // Create invisible download link and trigger click
     const linkElement = document.createElement('a');
@@ -924,11 +911,11 @@ document.addEventListener('DOMContentLoaded', function () {
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
 
-      
+
     // ⭐ NEW: Save backup timestamp to localStorage
     const backupTimestamp = new Date().toISOString();
     localStorage.setItem('lastBackupTimestamp', backupTimestamp);
-    
+
     // ⭐ NEW: Update UI with backup time
     updateLastBackupDisplay(backupTimestamp);
 
@@ -941,8 +928,25 @@ document.addEventListener('DOMContentLoaded', function () {
 		`;
     setTimeout(() => {
       backupStatus.textContent = '';
-    }, TIMEOUTS.BACKUP_IMPORTANT);  
+    }, TIMEOUTS.BACKUP_IMPORTANT);
+
   }
+
+
+
+
+  function calculateTotalStorageSize() {
+    let totalSize = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      totalSize += key.length * 2 + (value ? value.length * 2 : 0);
+    }
+    return totalSize;
+  }
+
+
+
 
   // Load backup data from file
   function loadBackup(event) {
@@ -1008,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // ⭐ NEW: Update backup timestamp when restoring from backup
         localStorage.setItem('lastBackupTimestamp', new Date().toISOString());
         updateLastBackupDisplay();
-        
+
         // Show restore status
         // backupStatus.textContent = `Restored ${loadedCount} items from backup`;
         backupStatus.innerHTML = `
@@ -1051,11 +1055,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const details = localStorage.getItem(`details_win_${windowId}`) || '';
 
     // Create URL with task data for new window
-    const url = `${window.location.origin}${
-      window.location.pathname
-    }?title=${encodeURIComponent(title)}&details=${encodeURIComponent(
-      details
-    )}#${windowId}`;
+    const url = `${window.location.origin}${window.location.pathname
+      }?title=${encodeURIComponent(title)}&details=${encodeURIComponent(
+        details
+      )}#${windowId}`;
 
     window.open(url, '_blank'); // Open in new tab/window
   };
@@ -1147,26 +1150,27 @@ document.addEventListener('DOMContentLoaded', function () {
     if (existingStats) {
       existingStats.remove();
     }
-  
+
     const sessions = [];
     let totalSize = 0;
-    
+
     // Calculate total storage usage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key.startsWith('pageTitle_win_')) {
         sessions.push(key);
       }
-      
+
       // Calculate size of each item (2 bytes per character for UTF-16)
       const value = localStorage.getItem(key);
       totalSize += key.length * 2 + (value ? value.length * 2 : 0);
     }
-    
-    const totalSizeKB = (totalSize / 1024).toFixed(2);
+
+    // const totalSizeKB = (totalSize / 1024).toFixed(2);    
+    const totalSizeKB = 4000000000;
     const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
     const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-    
+
     const statsElement = document.createElement('div');
     statsElement.id = 'taskStats';
     statsElement.style.cssText = `
@@ -1179,41 +1183,42 @@ document.addEventListener('DOMContentLoaded', function () {
       background: ${usagePercentage > 80 ? '#fff3cd' : '#f8f9fa'};
       border-radius: 4px;
     `;
-    
+
     let sizeMessage = `Total tasks: ${sessions.length} | Storage: ${totalSizeKB} KB`;
     if (usagePercentage > 60) {
       sizeMessage += ` | ⚠️ ${usagePercentage}% of 5MB limit`;
     }
-    
+
     statsElement.innerHTML = `
       <div>${sizeMessage}</div>
       ${usagePercentage > 80 ? '<div style="color: #dc3545; font-weight: bold; margin-top: 5px;">⚠️ Storage limit approaching!</div>' : ''}
     `;
-  
+
     // Add to session management section
     const sessionManagement = document.querySelector('.session-management');
     sessionManagement.appendChild(statsElement);
-    
+
     // Show warning alert if critically close to limit
     if (usagePercentage > 90) {
       showStorageWarning(usagePercentage, totalSizeMB);
     }
-    
+
     return totalSize;
   }
 
   function showStorageWarning(usagePercentage, totalSizeMB) {
+    alert('run showStorageWarning')
     // Only show alert once per session to avoid annoying users
     const lastStorageWarning = localStorage.getItem('lastStorageWarning');
     const now = new Date().getTime();
-    
+
     if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
       alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
       localStorage.setItem('lastStorageWarning', now.toString());
     }
   }
-  
-    // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
+
+  // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
   // This must be after all DOM elements are fully loaded
   updateLastBackupDisplay();
 
@@ -1221,28 +1226,30 @@ document.addEventListener('DOMContentLoaded', function () {
   // checkStorageRegularly 
   checkStorageRegularly();
 
-
-  // ===== MODAL FUNCTIONALITY START =====
-  const docsToggle = document.getElementById('docsToggle');
-  const docsModal = document.getElementById('docsModal');
-
-  if (docsToggle && docsModal) {
-    docsToggle.addEventListener('click', function (e) {
-      e.stopPropagation();
-      docsModal.style.display =
-        docsModal.style.display === 'none' ? 'block' : 'none';
-    });
-
-    // Close modal when clicking outside
-    document.addEventListener('click', function (event) {
-      if (
-        docsModal.style.display === 'block' &&
-        !docsModal.contains(event.target) &&
-        event.target !== docsToggle
-      ) {
-        docsModal.style.display = 'none';
-      }
-    });
-  }
-  // ===== MODAL FUNCTIONALITY END =====
 });
+
+
+// ===== MODAL FUNCTIONALITY START =====
+const docsToggle = document.getElementById('docsToggle');
+const docsModal = document.getElementById('docsModal');
+
+if (docsToggle && docsModal) {
+  docsToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    docsModal.style.display =
+      docsModal.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Close modal when clicking outside
+  document.addEventListener('click', function (event) {
+    if (
+      docsModal.style.display === 'block' &&
+      !docsModal.contains(event.target) &&
+      event.target !== docsToggle
+    ) {
+      docsModal.style.display = 'none';
+    }
+  });
+}
+  // ===== MODAL FUNCTIONALITY END =====
+ 
