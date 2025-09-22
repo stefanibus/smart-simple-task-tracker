@@ -117,7 +117,7 @@ function updateLastBackupDisplay(timestamp) {
 
 
 
-  
+
 
 
 
@@ -182,66 +182,66 @@ function showBackupWarning(hoursOld) {
 function checkStorageRegularly() {
 
   // TEST: Change to 0.1% instead of 85% for easy testing  stefano 
-    const TEST_THRESHOLD = 0.1; // 0.1% instead of 85%
-  
-    // Check storage every 5 minutes
-    setInterval(() => {
-      const totalSize = calculateTotalStorageSize();
-      const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-      // alert(usagePercentage);
-  
-      if (usagePercentage > TEST_THRESHOLD) {
-        // Update stats display with warning
-        showSimpleStats();
-      }
-    }, 5000); // 5 minutes = 300000
-  }
-  
+  const TEST_THRESHOLD = 0.1; // 0.1% instead of 85%
 
+  // Check storage every 5 minutes
+  setInterval(() => {
+    const totalSize = calculateTotalStorageSize();
+    const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
+    // alert(usagePercentage);
 
-  function showStorageWarning(usagePercentage, totalSizeMB) {
-    // Only show alert once per session to avoid annoying users
-    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
-    const now = new Date().getTime();
-
-    if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
-      alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
-      localStorage.setItem('lastStorageWarning', now.toString());
+    if (usagePercentage > TEST_THRESHOLD) {
+      // Update stats display with warning
+      showSimpleStats();
     }
+  }, 5000); // 5 minutes = 300000
+}
+
+
+
+function showStorageWarning(usagePercentage, totalSizeMB) {
+  // Only show alert once per session to avoid annoying users
+  const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+  const now = new Date().getTime();
+
+  if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
+    alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
+    localStorage.setItem('lastStorageWarning', now.toString());
+  }
+}
+
+
+
+
+function showSimpleStats() {
+  // Remove existing stats if any
+  const existingStats = document.getElementById('taskStats');
+  if (existingStats) {
+    existingStats.remove();
   }
 
+  const sessions = [];
 
-
-
-  function showSimpleStats() {
-    // Remove existing stats if any
-    const existingStats = document.getElementById('taskStats');
-    if (existingStats) {
-      existingStats.remove();
-    }
-  
-    const sessions = [];
-    
   // USE THE CORRECTED FUNCTION INSTEAD OF MANUAL CALCULATION
-  const totalSize = calculateTotalStorageSize(); 
-  
-    // Count sessions separately if needed
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.startsWith('pageTitle_win_')) {
-        sessions.push(key);
-      }
+  const totalSize = calculateTotalStorageSize();
+
+  // Count sessions separately if needed
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith('pageTitle_win_')) {
+      sessions.push(key);
     }
-    
+  }
+
   const totalSizeKB = (totalSize / 1024).toFixed(2);
   const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
   const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
- 
-     
-  
-    const statsElement = document.createElement('div');
-    statsElement.id = 'taskStats';
-    statsElement.style.cssText = `
+
+
+
+  const statsElement = document.createElement('div');
+  statsElement.id = 'taskStats';
+  statsElement.style.cssText = `
         font-size: 12px;
         color: #666;
         margin-top: 10px;
@@ -251,30 +251,30 @@ function checkStorageRegularly() {
         background: ${usagePercentage > 80 ? '#fff3cd' : '#f8f9fa'};
         border-radius: 4px;
       `;
-  
-    let sizeMessage = `Total tasks: ${sessions.length} | Storage: ${totalSizeKB} KB`;
-    if (usagePercentage > 60) {
-      sizeMessage += ` | ⚠️ ${usagePercentage}% of 5MB limit`;
-    }
-  
-    statsElement.innerHTML = `
+
+  let sizeMessage = `Total tasks: ${sessions.length} | Storage: ${totalSizeKB} KB`;
+  if (usagePercentage > 60) {
+    sizeMessage += ` | ⚠️ ${usagePercentage}% of 5MB limit`;
+  }
+
+  statsElement.innerHTML = `
         <div>${sizeMessage}</div>
         ${usagePercentage > 80 ? '<div style="color: #dc3545; font-weight: bold; margin-top: 5px;">⚠️ Storage limit approaching!</div>' : ''}
       `;
-  
-    // Add to session management section
-    const sessionManagement = document.querySelector('.session-management');
-    sessionManagement.appendChild(statsElement);
-  
-    // Show warning alert if critically close to limit
-    if (usagePercentage > 90) {
-      showStorageWarning(usagePercentage, totalSizeMB);
-    }
-  
-    return totalSize;
+
+  // Add to session management section
+  const sessionManagement = document.querySelector('.session-management');
+  sessionManagement.appendChild(statsElement);
+
+  // Show warning alert if critically close to limit
+  if (usagePercentage > 90) {
+    showStorageWarning(usagePercentage, totalSizeMB);
   }
-  
-  
+
+  return totalSize;
+}
+
+
 
 // Main initialization when DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function () {
@@ -496,9 +496,13 @@ document.addEventListener('DOMContentLoaded', function () {
   // Finalize URL with loaded data
   updateURL(initialTitle, initialDetails);
 
-  // Auto-Focus the title field for immediate typing
-  // disabled in developermode
-  // titleTextarea.focus();
+  // Check if we're on Stackedit or on out Live-Page 
+  const isOnProduction = window.location.hostname.includes('stefanibus.github.io')
+
+  if (isOnProduction) {
+    // Auto-Focus the title field for immediate typing
+    titleTextarea.focus(); 
+  }
 
   // ===== EVENT LISTENERS FOR TYPING =====
   // Title textarea input listener with debouncing
