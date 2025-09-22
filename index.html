@@ -1,103 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <link rel="icon" href="https://www.make-mobile.de/favicon.ico" type="image/x-icon">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smart Simple Task Tracker (SSTT)</title> 
-    <!-- Pikaday CSS --> 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css"
-    />
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1
-          id="titleHeading"
-          data-additional-info="Cross-Window Task Overview / Parallel Task List / Task Network"
-        ></h1>
-      </header>
 
-      <div class="input-group">
-        <label for="enterNewTitle"
-          >Zusammenfassung aller Aufgaben für diese "Chrome-Tab-Group":</label
-        >
-        <div class="title-with-date">
-          <textarea
-            id="enterNewTitle"
-            autofocus
-            placeholder="Start typing your title here..."
-            maxlength="80"
-            required
-          ></textarea>
-          <div class="date-picker-container">
-            <input type="text" id="taskDueDate" placeholder="Due date" />
-            <span class="days-indicator" id="daysIndicator"></span>
-          </div>
-        </div>
-        <div id="counter" class="counter">0/80 characters</div>
-      </div>
+<head>
+  <link rel="icon" href="https://www.make-mobile.de/favicon.ico" type="image/x-icon">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Simple Task Tracker (SSTT)</title>
+  <!-- Pikaday CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/css/pikaday.min.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
 
-      <div class="input-group">
-        <label for="enterNewDetails">Detail-Gedanken zu dieser Aufgabe:</label>
-        <textarea
-          id="enterNewDetails"
-          placeholder="Add your detailed thoughts here..."
-          maxlength="600"
-        ></textarea>
-        <div id="detailsCounter" class="counter">0/600 characters</div>
-      </div>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="titleHeading" data-additional-info="Cross-Window Task Overview / Parallel Task List / Task Network"></h1>
+    </header>
 
-      <!-- Task List Section -->
-      <div class="session-management">
-        <div class="session-header">
-          <h3
-            data-additional-info="Cross-Window Task Overview / Parallel Task List / Task Network"
-          >
-            Other Active Tasks
-          </h3>
-          <div class="refresh-status">
-            <span id="lastRefreshTime">Just now</span>
-            • <button id="manualRefresh" class="refresh-btn">↻ Refresh</button>
-          </div>
-        </div>
-
-        <div class="session-list" id="sessionList">
-          <div class="no-sessions">No other task sessions found</div>
-          <!-- Three sections will be inserted here by JavaScript -->
-        </div>
-
-        <!-- Backup Section -->
-        <div class="backup-section">
-          <h4>Data Backup</h4>
-          <p>
-            Save your tasks to a file for backup or transfer between devices.
-          </p>
-
-          <div class="backup-buttons">
-            <button class="backup-btn save" id="saveBackup">Save Backup</button>
-            <button class="backup-btn" id="loadBackup">Load Backup</button>
-            <input
-              type="file"
-              id="backupFile"
-              accept=".json"
-              style="display: none"
-            />
-          </div>
-
-          <div class="backup-status" id="backupStatus">Backup-Status</div>
+    <div class="input-group">
+      <label for="enterNewTitle">Zusammenfassung aller Aufgaben für diese "Chrome-Tab-Group":</label>
+      <div class="title-with-date">
+        <textarea id="enterNewTitle" autofocus placeholder="Start typing your title here..." maxlength="80"
+          required></textarea>
+        <div class="date-picker-container">
+          <input type="text" id="taskDueDate" placeholder="Due date" />
+          <span class="days-indicator" id="daysIndicator"></span>
         </div>
       </div>
+      <div id="counter" class="counter">0/80 characters</div>
     </div>
 
-    <!-- Documentation Modal Toggle Button -->
-    <button id="docsToggle" title="how this page works">ℹ️</button>
+    <div class="input-group">
+      <label for="enterNewDetails">Detail-Gedanken zu dieser Aufgabe:</label>
+      <textarea id="enterNewDetails" placeholder="Add your detailed thoughts here..." maxlength="600"></textarea>
+      <div id="detailsCounter" class="counter">0/600 characters</div>
+    </div>
 
-    <!-- AI-SPECIFIC DOCUMENTATION START -->
-    <!--
+    <!-- Task List Section -->
+    <div class="session-management">
+      <div class="session-header">
+        <h3 data-additional-info="Cross-Window Task Overview / Parallel Task List / Task Network">
+          Other Active Tasks
+        </h3>
+        <div class="refresh-status">
+          <span id="lastRefreshTime">Just now</span>
+          • <button id="manualRefresh" class="refresh-btn">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="session-list" id="sessionList">
+        <div class="no-sessions">No other task sessions found</div>
+        <!-- Three sections will be inserted here by JavaScript -->
+      </div>
+
+      <!-- Backup Section -->
+      <div class="backup-section">
+        <h4>Data Backup</h4>
+        <p>
+          Save your tasks to a file for backup or transfer between devices.
+        </p>
+
+        <div class="backup-buttons">
+          <button class="backup-btn save" id="saveBackup">Save Backup</button>
+          <button class="backup-btn" id="loadBackup">Load Backup</button>
+          <input type="file" id="backupFile" accept=".json" style="display: none" />
+        </div>
+
+        <div class="backup-status" id="backupStatus">Backup-Status</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documentation Modal Toggle Button -->
+  <button id="docsToggle" title="how this page works">ℹ️</button>
+
+  <!-- AI-SPECIFIC DOCUMENTATION START -->
+  <!--
+            URL Parameters (source of truth) →    localStorage Cache (performance) → UI Display (render)
+            
             ARCHITECTURE: distributed-single-task-system
             PATTERN: one-tab-group-per-task 
             DATA_FLOW: cross-tab-localstorage-sync
@@ -108,221 +88,228 @@
             TECH_STACK: vanilla-js, localStorage, url-parameters
             SYNC_MECHANISM: localStorage-event-bus
             UNIQUE_ID_SYSTEM: win_xxxxxxxxx
-            PRIORITY: url-params-over-localstorage
+            PRIORITY: url-params-over-localstorage 
             -->
-    <!-- AI-SPECIFIC DOCUMENTATION END -->
+  <!-- AI-SPECIFIC DOCUMENTATION END -->
 
-    <!-- Documentation Modal START -->
-    <div id="docsModal" style="display: none">
-      <div class="docs-container">
-        <h1>🚀 Smart Task Tracker (STT)</h1>
-        <p class="center-text">
-          <strong>Single-Topic-Taskpage System for Focused Work</strong>
-        </p>
+  <!-- Documentation Modal START -->
+  <div id="docsModal" style="display: none">
+    <div class="docs-container">
+      <h1>🚀 Smart Task Tracker (STT)</h1>
+      <p class="center-text">
+        <strong>Single-Topic-Taskpage System for Focused Work</strong>
+      </p>
 
-        <!-- AI-OPTIMIZED SUMMARY -->
-        <div
-          class="ai-summary"
-          style="
+      <!-- AI-OPTIMIZED SUMMARY -->
+      <div class="ai-summary" style="
             background: #f0f7ff;
             padding: 15px;
             border-radius: 8px;
             margin: 15px 0;
             border-left: 4px solid #4a6fa5;
-          "
-        >
-          <h3>🤖 AI-Friendly System Overview</h3>
-          <p>
-            <strong>Architecture:</strong> Distributed single-task system with
-            one STT instance per Chrome Tab Group
-          </p>
-          <p>
-            <strong>Data Flow:</strong> Cross-tab communication via localStorage
-            event bus with URL parameter synchronization
-          </p>
-          <p>
-            <strong>Key Innovation:</strong> Keystroke-aware updates with
-            aggregated task view across all open tabs
-          </p>
-        </div>
-
-        <div class="core-concept">
-          <h2>Core Architecture: One STT Per Tab Group</h2>
-          <p>STT follows a simple but powerful organizational principle:</p>
-          <ul>
-            <li>
-              <span class="emphasis">Each Chrome Tab Group</span> represents
-              <span class="emphasis">one topic</span> to work on
-            </li>
-            <li>
-              <span class="emphasis">Each Tab Group</span> contains exactly
-              <span class="emphasis">one STT</span> to manage all related
-              thoughts and tasks
-            </li>
-            <li>
-              You typically have
-              <span class="emphasis">20-30 Tab Groups</span> open
-              simultaneously, each with its own dedicated STT
-            </li>
-          </ul>
-        </div>
-
-        <h2>How It Works</h2>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h3>🌐 Chrome Tab Group = One Topic</h3>
-            <p>
-              Each tab group represents a single topic or project, with
-              typically 20-30 groups open simultaneously.
-            </p>
-          </div>
-          <div class="feature-card">
-            <h3>📋 One STT Per Group</h3>
-            <p>
-              Every tab group contains exactly one STT interface to manage all
-              tasks and thoughts for that specific topic.
-            </p>
-          </div>
-          <div class="feature-card">
-            <h3>🔄 Real-Time Sync</h3>
-            <p>
-              Keystroke-aware updates with URL parameter sharing for instant
-              synchronization across all open STTs.
-            </p>
-          </div>
-          <div class="feature-card">
-            <h3>💾 LocalStorage Communication</h3>
-            <p>
-              Shared communication bus between all open windows/tabs enables
-              cross-window task awareness.
-            </p>
-          </div>
-        </div>
-
-        <h2>Key Features</h2>
-        <ul>
-          <li>
-            <strong>One Task Per Tab:</strong> Each STT manages exactly one
-            primary task for its tab group
-          </li>
-          <li>
-            <strong>Cross-Window Awareness:</strong> All STTs see each other's
-            tasks in real-time
-          </li>
-          <li>
-            <strong>URL Parameter Sync:</strong> Task data is shared via URL
-            parameters for easy sharing
-          </li>
-          <li>
-            <strong>Due Date Tracking:</strong> Visual indicators for past
-            due/upcoming tasks
-          </li>
-          <li>
-            <strong>Keystroke-Aware Updates:</strong> Real-time sync triggered
-            by typing activity
-          </li>
-          <li>
-            <strong>Chrome Sync Compatible:</strong> Tab groups sync across
-            devices via Chrome's built-in synchronization
-          </li>
-          <li>
-            <strong>Backup System:</strong> Import/export functionality for all
-            your tasks
-          </li>
-        </ul>
-
-        <h2>Workflow & Navigation</h2>
-        <ul>
-          <li>
-            Use <span class="key-combo">Alt</span> +
-            <span class="key-combo">Tab</span> on Windows to quickly switch
-            between task windows
-          </li>
-          <li>
-            Use <span class="key-combo">Ctrl</span> +
-            <span class="key-combo">Shift</span> +
-            <span class="key-combo">A</span> in Chrome to jump between windows
-            quickly
-          </li>
-          <li>
-            Keep the STT tab active in each Chrome window for instant overview
-            when switching
-          </li>
-          <li>Prefix task titles with group numbers for easy identification</li>
-          <li>
-            Use due dates to track time-sensitive tasks waiting for feedback
-          </li>
-        </ul>
-
-        <div class="tip">
-          <strong>Pro Tip:</strong> Manually number your Chrome Tab Groups and
-          use the same number as the first characters in your task title for
-          visual organization across all your STTs.
-        </div>
-
-        <h2>Technical Implementation</h2>
-        <ul>
-          <li>
-            Each STT gets a unique ID (<span class="code">win_xxxxxxxxx</span>)
-          </li>
-          <li>
-            Data is stored with key prefixes:
-            <span class="code">pageTitle_win_xxx</span>,
-            <span class="code">details_win_xxx</span>
-          </li>
-          <li>
-            The "Task List" shows
-            <strong>all active tasks including the current tab</strong>
-          </li>
-          <li>
-            Keystroke-aware refresh keeps everything in sync (not just periodic
-            updates)
-          </li>
-          <li>Tasks are categorized into: Past Due / Undated / Upcoming</li>
-          <li>
-            URL parameters store task data:
-            <span class="code"
-              >?win=id&title=text&details=text&dueDate=YYYY-MM-DD</span
-            >
-          </li>
-          <li>
-            Priority System: URL parameters take precedence over local storage,
-            enabling sharing across devices via synced Grouped Tabs in Chrome.
-          </li>
-        </ul>
-
-        <h2>Keyboard Shortcuts</h2>
-        <ul>
-          <li>
-            <span class="key-combo">Ctrl</span> +
-            <span class="key-combo">S</span>: Save backup
-          </li>
-          <li>
-            <span class="key-combo">Ctrl</span> +
-            <span class="key-combo">R</span>: Refresh task list
-          </li>
-          <li>
-            <span class="key-combo">Esc</span>: Clear focus from current field
-          </li>
-        </ul>
-        <h2>Mobile Synchronization</h2>
+          ">
+        <h3>🤖 AI-Friendly System Overview</h3>
         <p>
-          Your Chrome tab groups (and thus your STT pages) will automatically
-          sync with your mobile device through Chrome's built-in synchronization
-          features, maintaining your multi-window workspace across devices.
+          <strong>Architecture:</strong> Distributed single-task system with
+          one STT instance per Chrome Tab Group
         </p>
-
-        <h2>Sharing Tasks</h2>
         <p>
-          Since task data is encoded in URL parameters, you can share individual
-          tasks simply by copying the URL. When opened, the recipient will see
-          the exact task content you've created.
+          <strong>Data Flow:</strong> Cross-tab communication via localStorage
+          event bus with URL parameter synchronization
+        </p>
+        <p>
+          <strong>Key Innovation:</strong> Keystroke-aware updates with
+          aggregated task view across all open tabs
         </p>
       </div>
 
-      <button
-        onclick="document.getElementById('docsModal').style.display='none'"
-        style="
+      <div class="core-concept">
+        <h2>Core Architecture: One STT Per Tab Group</h2>
+        <p>STT follows a simple but powerful organizational principle:</p>
+        <ul>
+          <li>
+            <span class="emphasis">Each Chrome Tab Group</span> represents
+            <span class="emphasis">one topic</span> to work on
+          </li>
+          <li>
+            <span class="emphasis">Each Tab Group</span> contains exactly
+            <span class="emphasis">one STT</span> to manage all related
+            thoughts and tasks
+          </li>
+          <li>
+            You typically have
+            <span class="emphasis">20-30 Tab Groups</span> open
+            simultaneously, each with its own dedicated STT
+          </li>
+        </ul>
+      </div>
+
+      <h2>How It Works</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>🌐 Chrome Tab Group = One Topic</h3>
+          <p>
+            Each tab group represents a single topic or project, with
+            typically 20-30 groups open simultaneously.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>📋 One STT Per Group</h3>
+          <p>
+            Every tab group contains exactly one STT interface to manage all
+            tasks and thoughts for that specific topic.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>🔄 Real-Time Sync</h3>
+          <p>
+            Keystroke-aware updates with URL parameter sharing for instant
+            synchronization across all open STTs.
+          </p>
+        </div>
+        <div class="feature-card">
+          <h3>💾 LocalStorage Communication</h3>
+          <p>
+            Shared communication bus between all open windows/tabs enables
+            cross-window task awareness.
+          </p>
+        </div>
+      </div>
+
+      <h2>Key Features</h2>
+      <ul>
+        <li>
+          <strong>One Task Per Tab:</strong> Each STT manages exactly one
+          primary task for its tab group
+        </li>
+        <li>
+          <strong>Cross-Window Awareness:</strong> All STTs see each other's
+          tasks in real-time
+        </li>
+        <li>
+          <strong>URL Parameter Sync:</strong> Task data is shared via URL
+          parameters for easy sharing
+        </li>
+        <li>
+          <strong>Due Date Tracking:</strong> Visual indicators for past
+          due/upcoming tasks
+        </li>
+        <li>
+          <strong>Keystroke-Aware Updates:</strong> Real-time sync triggered
+          by typing activity
+        </li>
+        <li>
+          <strong>Chrome Sync Compatible:</strong> Tab groups sync across
+          devices via Chrome's built-in synchronization
+        </li>
+        <li>
+          <strong>Backup System:</strong> Import/export functionality for all
+          your tasks
+        </li>
+        <li>
+          <strong>URL-First Architecture</strong>: Tasks are synchronized via URL parameters for reliable cross-device
+          compatibility
+        </li>
+        <li>
+          <strong>Event Delegation</strong>: All task actions use efficient event delegation for dynamic content
+        </li>
+        <li>
+          <strong>LocalStorage as Cache</strong>: Browser storage acts as performance cache while URLs maintain data
+          integrity
+        </li>
+        <li>
+          <strong>Cross-Device Sync</strong>: Share task URLs across devices via browser tab syncing
+        </li>
+      </ul>
+
+      <h2>Workflow & Navigation</h2>
+      <ul>
+        <li>
+          Use <span class="key-combo">Alt</span> +
+          <span class="key-combo">Tab</span> on Windows to quickly switch
+          between task windows
+        </li>
+        <li>
+          Use <span class="key-combo">Ctrl</span> +
+          <span class="key-combo">Shift</span> +
+          <span class="key-combo">A</span> in Chrome to jump between windows
+          quickly
+        </li>
+        <li>
+          Keep the STT tab active in each Chrome window for instant overview
+          when switching
+        </li>
+        <li>Prefix task titles with group numbers for easy identification</li>
+        <li>
+          Use due dates to track time-sensitive tasks waiting for feedback
+        </li>
+      </ul>
+
+      <div class="tip">
+        <strong>Pro Tip:</strong> Manually number your Chrome Tab Groups and
+        use the same number as the first characters in your task title for
+        visual organization across all your STTs.
+      </div>
+
+      <h2>Technical Implementation</h2>
+      <ul>
+        <li>
+          Each STT gets a unique ID (<span class="code">win_xxxxxxxxx</span>)
+        </li>
+        <li>
+          Data is stored with key prefixes:
+          <span class="code">pageTitle_win_xxx</span>,
+          <span class="code">details_win_xxx</span>
+        </li>
+        <li>
+          The "Task List" shows
+          <strong>all active tasks including the current tab</strong>
+        </li>
+        <li>
+          Keystroke-aware refresh keeps everything in sync (not just periodic
+          updates)
+        </li>
+        <li>Tasks are categorized into: Past Due / Undated / Upcoming</li>
+        <li>
+          URL parameters store task data:
+          <span class="code">?win=id&title=text&details=text&dueDate=YYYY-MM-DD</span>
+        </li>
+        <li>
+          Priority System: URL parameters take precedence over local storage,
+          enabling sharing across devices via synced Grouped Tabs in Chrome.
+        </li>
+      </ul>
+
+      <h2>Keyboard Shortcuts</h2>
+      <ul>
+        <li>
+          <span class="key-combo">Ctrl</span> +
+          <span class="key-combo">S</span>: Save backup
+        </li>
+        <li>
+          <span class="key-combo">Ctrl</span> +
+          <span class="key-combo">R</span>: Refresh task list
+        </li>
+        <li>
+          <span class="key-combo">Esc</span>: Clear focus from current field
+        </li>
+      </ul>
+      <h2>Mobile Synchronization</h2>
+      <p>
+        Your Chrome tab groups (and thus your STT pages) will automatically
+        sync with your mobile device through Chrome's built-in synchronization
+        features, maintaining your multi-window workspace across devices.
+      </p>
+
+      <h2>Sharing Tasks</h2>
+      <p>
+        Since task data is encoded in URL parameters, you can share individual
+        tasks simply by copying the URL. When opened, the recipient will see
+        the exact task content you've created.
+      </p>
+    </div>
+
+    <button onclick="document.getElementById('docsModal').style.display='none'" style="
           background: #e74c3c;
           color: white;
           border: none;
@@ -330,15 +317,15 @@
           border-radius: 5px;
           cursor: pointer;
           margin-top: 20px;
-        "
-      >
-        Close Documentation
-      </button>
-    </div>
-    <!-- Documentation Modal END -->
+        ">
+      Close Documentation
+    </button>
+  </div>
+  <!-- Documentation Modal END -->
 
-    <!-- Pikaday JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/pikaday.min.js"></script>
-    <script src="./script.js"></script>
-  </body>
+  <!-- Pikaday JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.0/pikaday.min.js"></script>
+  <script src="./script.js"></script>
+</body>
+
 </html>
