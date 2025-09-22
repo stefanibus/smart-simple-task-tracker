@@ -5,7 +5,7 @@ A distributed single-task system designed for focused work with Chrome Tab Group
 ## Live Page on GitHub Pages
 Visit [SSTT Page](https://stefanibus.github.io/smart-simple-task-tracker) to get started.
 
-Use "One SSTT Page" to manage 'all your thoughts and tasks' related to a single Chrome-Tab-Group.
+Use one "SSTT Page" to manage 'all your thoughts and tasks' related to a single Chrome-Tab-Group.
 
 Since you’ll likely have multiple Tab Groups open, we recommend placing each Tab Group in its own Chrome window. (though it’s not required)  
 
