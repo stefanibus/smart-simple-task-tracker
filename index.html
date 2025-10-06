@@ -76,6 +76,8 @@
 
   <!-- AI-SPECIFIC DOCUMENTATION START -->
   <!--
+            URL Parameters (source of truth) →    localStorage Cache (performance) → UI Display (render)
+            
             ARCHITECTURE: distributed-single-task-system
             PATTERN: one-tab-group-per-task 
             DATA_FLOW: cross-tab-localstorage-sync
@@ -86,7 +88,7 @@
             TECH_STACK: vanilla-js, localStorage, url-parameters
             SYNC_MECHANISM: localStorage-event-bus
             UNIQUE_ID_SYSTEM: win_xxxxxxxxx
-            PRIORITY: url-params-over-localstorage
+            PRIORITY: url-params-over-localstorage 
             -->
   <!-- AI-SPECIFIC DOCUMENTATION END -->
 
@@ -172,6 +174,14 @@
             cross-window task awareness.
           </p>
         </div>
+        </div>
+        <div class="feature-card">
+          <h3>💾 LocalStorage Communication</h3>
+          <p>
+            Shared communication bus between all open windows/tabs enables
+            cross-window task awareness.
+          </p>
+        </div>
       </div>
 
       <h2>Key Features</h2>
@@ -203,6 +213,20 @@
         <li>
           <strong>Backup System:</strong> Import/export functionality for all
           your tasks
+        </li>
+        <li>
+          <strong>URL-First Architecture</strong>: Tasks are synchronized via URL parameters for reliable cross-device
+          compatibility
+        </li>
+        <li>
+          <strong>Event Delegation</strong>: All task actions use efficient event delegation for dynamic content
+        </li>
+        <li>
+          <strong>LocalStorage as Cache</strong>: Browser storage acts as performance cache while URLs maintain data
+          integrity
+        </li>
+        <li>
+          <strong>Cross-Device Sync</strong>: Share task URLs across devices via browser tab syncing
         </li>
       </ul>
 

@@ -1,15 +1,31 @@
-// Generate a unique ID for this window/tab
+// Generate a unique ID for this window/tab - URL-FIRST approach
 // This allows multiple task windows to coexist without interfering
 const generateWindowId = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const urlWinId = urlParams.get('win');
 
-  // If URL already has a window ID, use it and set hash for backward compatibility
+  // ALWAYS trust the URL for cross-device sync compatibility
+  // If URL already has a window ID, use it and set hash for backward compatibility 
   if (urlWinId) {
-    window.location.hash = urlWinId;
-    return urlWinId;
-  }
+    const titleExists = localStorage.getItem(`pageTitle_win_${urlWinId}`);
+    const detailsExists = localStorage.getItem(`details_win_${urlWinId}`);
+    const urlTitle = urlParams.get('title');
+    const urlDetails = urlParams.get('details');
 
+    // If URL has content but no existing data, INITIALIZE it
+    if ((urlTitle || urlDetails) && !titleExists && !detailsExists) {
+      // console.log('Initializing stale URL with fresh data');
+
+      if (urlTitle) {
+        localStorage.setItem(`pageTitle_win_${urlWinId}`, urlTitle);
+        localStorage.setItem(`timestamp_pageTitle_win_${urlWinId}`, Date.now().toString());
+      }
+      if (urlDetails) {
+        localStorage.setItem(`details_win_${urlWinId}`, urlDetails);
+        localStorage.setItem(`timestamp_details_win_${urlWinId}`, Date.now().toString());
+      }
+    }
+  }
   // If hash exists but not in URL params, sync them 
   if (window.location.hash) {
     const hashId = window.location.hash.substring(1);
@@ -19,8 +35,7 @@ const generateWindowId = () => {
     window.history.replaceState({}, '', tempURL);
     return hashId;
   }
-
-  // Create new unique ID if none exists
+  // Create new unique ID only if no URL identifier exists
   const newId = 'win_' + Math.random().toString(36).substr(2, 9);
   const tempURL = new URL(window.location);
   tempURL.searchParams.set('win', newId);
@@ -28,6 +43,7 @@ const generateWindowId = () => {
   window.history.replaceState({}, '', tempURL);
   return newId;
 };
+
 
 // Generate and store window ID
 const windowId = generateWindowId();
@@ -356,8 +372,27 @@ document.addEventListener('DOMContentLoaded', function () {
   updateBodyOpacityBasedOnDueDate(); // Add this line
 
 
+  // Add this event listener for delete buttons (event delegation)  
+  sessionList.addEventListener('click', function (e) {
+    // Check if the clicked element is a delete button
+    // console.log('Session list clicked:', e.target);
+    if (e.target.classList.contains('delete')) {
+      // console.log('Delete button clicked');
+      const windowId = e.target.getAttribute('data-windowid');
+      const title = e.target.getAttribute('data-title');
+      // console.log('WindowId:', windowId, 'Title:', title);
 
+      // Call deleteSession with the data from attributes
+      deleteSession(windowId, title);
+    }
 
+    // ADD THIS FOR VIEW BUTTONS:
+    if (e.target.classList.contains('view')) {
+      // console.log('View button clicked');
+      const windowId = e.target.getAttribute('data-windowid');
+      focusSession(windowId);
+    }
+  });
 
   // Load saved due date from previous session
   const savedDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
@@ -443,9 +478,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== INITIAL DATA LOADING =====
   // Check URL parameters first (for sharing/shallow linking)
   const urlParams = new URLSearchParams(window.location.search);
-  const urlTitle = urlParams.get('title');
-  const urlDetails = urlParams.get('details');
-  const urlDueDate = urlParams.get('dueDate');
+  let urlTitle = urlParams.get('title');
+  let urlDetails = urlParams.get('details');
+  let urlDueDate = urlParams.get('dueDate');
 
   // Fall back to localStorage if no URL params
   const storedTitle = localStorage.getItem(TITLE_STORAGE_KEY);
@@ -507,6 +542,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== EVENT LISTENERS FOR TYPING =====
   // Title textarea input listener with debouncing
   titleTextarea.addEventListener('input', function () {
+   // console.log('Title input detected:', this.value);
+   // console.log('WindowId:', windowId);
+   // console.log('Storage key would be:', `pageTitle_win_${windowId}`);
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -802,6 +840,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
+
     // Display the collected sessions
     displaySessions(sessions);
     showSimpleStats();
@@ -880,11 +919,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
 
-      // ⭐⭐ MODIFIED: Handle empty titles
+      // ⭐⭐ MODIFIED: Handle empty titles (In the session generation, ensure we have a valid title for the delete button )
       const displayTitle = session.title || 'Untitled Task';
       const displayDetails = session.details || 'No details';
-
-      // Build session item HTML
 
       // Build session item HTML
       html += `<div class="session-item ${taskStatus}">
@@ -899,10 +936,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     <small>Updated: ${timeText}</small>
                 </div>
                 <div class="session-actions">
-                    <button class="session-action view" onclick="focusSession('${session.windowId}')" 
-                        title="View task">👁️</button>
-                    <button class="session-action delete" onclick="deleteSession('${session.windowId}', '${escapeHtmlForJsString(displayTitle)}')"  
-                        title="Delete task">🗑️</button>
+                    <button class="session-action view" data-windowid="${session.windowId}" title="View task">👁️</button> 
+                    <button class="session-action delete" data-windowid="${session.windowId}" data-title="${escapeHtml(displayTitle)}" title="Delete task">🗑️</button>
+
                 </div>
             </div>`;
     });
@@ -1172,10 +1208,15 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   // Delete a task session with confirmation
-  window.deleteSession = function (windowId, taskTitle) {
+  function deleteSession(windowId, taskTitle) {
+   // console.log('deleteSession called with:', windowId, taskTitle);
+
+    // Handle empty/untitled tasks better
+    const displayTitle = taskTitle && taskTitle !== "''" ? taskTitle : 'Untitled Task';
+
     if (
       confirm(
-        `Are you sure you want to delete this task session?\n\nThe Title of this task session is called:\n\n${taskTitle}`
+        `Are you sure you want to delete this task session?\n\nTask: ${displayTitle}\nWindow ID: ${windowId}`
       )
     ) {
       // Remove all data associated with this session
@@ -1183,11 +1224,12 @@ document.addEventListener('DOMContentLoaded', function () {
       localStorage.removeItem(`details_win_${windowId}`);
       localStorage.removeItem(`timestamp_pageTitle_win_${windowId}`);
       localStorage.removeItem(`timestamp_details_win_${windowId}`);
-      // also remove DATE and Date-timetamp
+      localStorage.removeItem(`dueDate_win_${windowId}`);
+      localStorage.removeItem(`timestamp_dueDate_win_${windowId}`);
 
       loadSessions(); // Refresh the task list
     }
-  };
+  }
 
   // ===== UTILITY FUNCTIONS =====
 
