@@ -18,7 +18,7 @@
     </header>
 
     <div class="input-group">
-      <label for="enterNewTitle">Zusammenfassung aller Aufgaben für diese "Chrome-Tab-Group":</label>
+      <label for="enterNewTitle">Zusammenfassung<span> aller Aufgaben für diese "Chrome-Tab-Group"</span>:</label>
       <div class="title-with-date">
         <textarea id="enterNewTitle" autofocus placeholder="Start typing your title here..." maxlength="80"
           required></textarea>
@@ -31,7 +31,7 @@
     </div>
 
     <div class="input-group">
-      <label for="enterNewDetails">Detail-Gedanken zu dieser Aufgabe:</label>
+      <label for="enterNewDetails">Details & Gedanken <span>zu dieser Aufgaben-Gruppe</span>:</label>
       <textarea id="enterNewDetails" placeholder="Add your detailed thoughts here..." maxlength="600"></textarea>
       <div id="detailsCounter" class="counter">0/600 characters</div>
     </div>
@@ -166,6 +166,14 @@
             Keystroke-aware updates with URL parameter sharing for instant
             synchronization across all open STTs.
           </p>
+        </div>
+        <div class="feature-card">
+          <h3>💾 LocalStorage Communication</h3>
+          <p>
+            Shared communication bus between all open windows/tabs enables
+            cross-window task awareness.
+          </p>
+        </div>
         </div>
         <div class="feature-card">
           <h3>💾 LocalStorage Communication</h3>
@@ -309,16 +317,9 @@
       </p>
     </div>
 
-    <button onclick="document.getElementById('docsModal').style.display='none'" style="
-          background: #e74c3c;
-          color: white;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 5px;
-          cursor: pointer;
-          margin-top: 20px;
-        ">
-      Close Documentation
+    <button alt="Close Documentation" onclick="document.getElementById('docsModal').style.display='none'"
+      id="closeButton">
+      X
     </button>
   </div>
   <!-- Documentation Modal END -->

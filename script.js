@@ -768,7 +768,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Update character counter for title textarea
   function updateCounter() {
     const length = titleTextarea.value.length;
-    counter.textContent = `${length}/80 characters`; // Show character count
+    counter.textContent = `${80 - length} Restbuchstaben`; // Show character count
 
     // Add warning style when approaching character limit
     if (length > 70) {
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Update character counter for details textarea
   function updateDetailsCounter() {
     const length = detailsTextarea.value.length;
-    detailsCounter.textContent = `${length}/600 characters`;
+    detailsCounter.textContent = `${600 - length} Restbuchstaben`;
 
     // Add warning style when approaching character limit
     if (length > 580) {  // Warn when 20 characters remaining

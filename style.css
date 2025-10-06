@@ -4,7 +4,7 @@
   padding: 0;
 }
 
-body { 
+body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   max-width: 90vw;
   margin: 0 auto;
@@ -15,16 +15,12 @@ body {
 }
 
 /* Add this to your CSS file */
-body.future-task {
+/* Ensure the dimming doesn't affect readability of other elements */
+body.future-task header,
+body.future-task .input-group {
   opacity: 0.15;
   transition: opacity 0.3s ease;
 }
-
-/* Ensure the dimming doesn't affect readability of other elements */
-body.future-task .container {
-  opacity: 1; /* Keep content at full opacity */
-}
-
 
 .container {
   background-color: white;
@@ -70,6 +66,12 @@ label {
   font-size: 18px;
 }
 
+@media (max-width: 600px) {
+  label span {
+    display: none;
+  }
+}
+
 .title-with-date {
   position: relative;
 }
@@ -90,11 +92,22 @@ textarea {
 }
 
 #enterNewTitle {
-  min-height: 150px;
+  /* min-height: 150px; */
+  line-height: 1;
+  padding: 15px 10px 3px 10px;
+  justify-items: center;
 }
+
+@media (max-width: 600px) {
+  #enterNewTitle {
+    padding-bottom: 30px;
+  }
+}
+
 
 #enterNewDetails {
   min-height: 100px;
+  padding-top: 50px;
 }
 
 textarea:focus {
@@ -117,6 +130,7 @@ textarea::placeholder {
   gap: 8px;
   z-index: 10;
 }
+
 @media (max-width: 600px) {
   .date-picker-container {
     position: static;
@@ -130,6 +144,7 @@ textarea::placeholder {
     margin-left: 10px;
   }
 }
+
 #taskDueDate {
   width: 100px;
   padding: 8px 10px;
@@ -195,6 +210,13 @@ textarea::placeholder {
   margin-top: 8px;
   color: #6c757d;
   font-size: 14px;
+}
+
+#detailsCounter {
+  position: absolute;
+  right: 20px;
+  top: 48px;
+  color: white;
 }
 
 .counter.near-limit {
@@ -306,24 +328,28 @@ textarea::placeholder {
   justify-content: space-between;
   align-items: center;
 }
+
 /* Add these styles to your CSS file */
 
 /* Future tasks (not due yet) - Dimmed with blue border */
 .session-item.future-task {
-  opacity: 0.7;
+  opacity: 0.2;
   background-color: #f8f9fa;
   border-left: 4px solid #4ecdc4;
 }
 
 /* Current & Past due tasks - Yellow highlight */
 .session-item.current-or-past {
-  background-color: #fff9db; /* Light yellow */
-  border-left: 4px solid #ffd43b; /* Yellow border */
+  background-color: #fff9db;
+  /* Light yellow */
+  border-left: 4px solid #ffd43b;
+  /* Yellow border */
 }
 
 /* No due date - Neutral style */
 .session-item.no-date {
-  border-left: 4px solid #ced4da; /* Gray border */
+  border-left: 4px solid #ced4da;
+  /* Gray border */
 }
 
 /* Visual indicator for future tasks */
@@ -349,6 +375,7 @@ textarea::placeholder {
   background: #ffd43b;
   color: #333;
 }
+
 .future-task-item {
   display: inline-block;
   max-width: 80px;
@@ -392,6 +419,7 @@ textarea::placeholder {
   white-space: nowrap;
   max-width: 400px;
 }
+
 .session-date {
   font-size: 0.8em;
   color: #e74c3c;
@@ -614,6 +642,7 @@ textarea::placeholder {
   0% {
     background-color: #a8e6cf;
   }
+
   100% {
     background-color: transparent;
   }
@@ -645,8 +674,10 @@ textarea::placeholder {
   z-index: 1001;
   max-width: 90vw;
   max-height: 80vh;
-  overflow: auto; /* Single scrollbar on the modal */
-  display: none; /* Hidden by default, toggled by JS */
+  overflow: auto;
+  /* Single scrollbar on the modal */
+  display: none;
+  /* Hidden by default, toggled by JS */
 }
 
 #docsModal .docs-container {
@@ -661,25 +692,30 @@ textarea::placeholder {
 #docsModal .docs-container h1 {
   color: #2c3e50;
   border-bottom: 2px solid #eee;
-  padding-bottom: 0.5rem; /* Using rem for responsive spacing */
+  padding-bottom: 0.5rem;
+  /* Using rem for responsive spacing */
   margin-top: 0;
   text-align: center;
-  font-size: 2.5rem; /* Responsive font size using rem */
+  font-size: 2.5rem;
+  /* Responsive font size using rem */
   margin-bottom: 1.5rem;
 }
 
 #docsModal .docs-container h2 {
   color: #3498db;
-  margin-top: 1.5rem; /* Using rem for responsive spacing */
+  margin-top: 1.5rem;
+  /* Using rem for responsive spacing */
   border-bottom: 1px solid #eee;
   padding-bottom: 0.5rem;
-  font-size: 1.8rem; /* Responsive font size */
+  font-size: 1.8rem;
+  /* Responsive font size */
 }
 
 #docsModal .docs-container h3 {
   color: #2c3e50;
   margin-top: 1.25rem;
-  font-size: 1.4rem; /* Responsive font size */
+  font-size: 1.4rem;
+  /* Responsive font size */
 }
 
 #docsModal .docs-container ul {
@@ -688,7 +724,8 @@ textarea::placeholder {
 
 #docsModal .docs-container li {
   margin-bottom: 0.75rem;
-  font-size: 1rem; /* Base font size */
+  font-size: 1rem;
+  /* Base font size */
 }
 
 #docsModal .docs-container .core-concept {
@@ -773,12 +810,22 @@ textarea::placeholder {
   padding-bottom: 0.5rem;
 }
 
+#docsModal button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   #docsModal {
     padding: 15px;
-    max-width: 95vw;
-    max-height: 85vh;
+    max-width: 90vw;
+    max-height: 90vh;
   }
 
   #docsModal .docs-container h1 {
@@ -794,6 +841,7 @@ textarea::placeholder {
   }
 }
 
+
 @media (max-width: 480px) {
   #docsModal .docs-container h1 {
     font-size: 1.75rem;
@@ -806,4 +854,11 @@ textarea::placeholder {
   #docsModal .docs-container {
     padding: 5px;
   }
+
+  #docsModal button {
+    position: fixed;
+    right: 2px;
+    top: -10px;
+  }
+
 }
