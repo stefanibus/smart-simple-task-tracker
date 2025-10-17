@@ -1,29 +1,50 @@
-// WINID NORMALIZATION SYSTEM
+// START  ==> WINID NORMALIZATION SYSTEM
 function normalizeWinID(winID) {
   if (!winID || typeof winID !== 'string') return winID;
 
   let cleanWinID = winID.replace(/^win_/, '');
   // ALERT IF WE STILL HAVE DOUBLE win_ PREFIXES
-  if (cleanWinID !== winID) {
+  if (cleanWinID !== winID) {   // console.log(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
     alert(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
   }
 
   return cleanWinID;
 }
 function getSafeWinID(winID) {
-  return winID ? `win_${normalizeWinID(winID)}` : generateNewWinID();
-}
+  if (!winID) return generateNewWinID();
+  // If it already has win_ prefix, return as-is (NO NORMALIZATION NEEDED)
+  if (winID.startsWith('win_')) {
+    return winID;
+  }
 
+  // Otherwise, add the prefix
+  return `win_${winID}`;
+}
 function generateNewWinID() {
   return 'win_' + Math.random().toString(36).substring(2, 12);
 };
+
+function normalizeWinID(winID) {
+  if (!winID || typeof winID !== 'string') return winID;
+
+  let cleanWinID = winID.replace(/^win_/, '');
+
+  // This alert should NEVER fire now with the fixed getSafeWinID
+  if (cleanWinID !== winID) {
+    console.log('🚨 DOUBLE win_ DETECTED! This should not happen anymore!');
+    console.log('Input:', winID, 'Output:', cleanWinID);
+    console.trace('📍 This indicates a logic error in getSafeWinID');
+  }
+
+  return cleanWinID;
+}
 // END  ==> WINID NORMALIZATION SYSTEM
 
 // Generate a unique ID for this window/tab - URL-FIRST approach
 // This allows multiple task windows to coexist without interfering
 const generateWindowId = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const urlWinId = getSafeWinID(urlParams.get('win')); // NORMALIZE HERE!
+  const urlWinId = getSafeWinID(urlParams.get('win'));
 
   // ALWAYS trust the URL for cross-device sync compatibility
   // If URL already has a window ID, use it and set hash for backward compatibility 
@@ -78,6 +99,10 @@ const TITLE_STORAGE_KEY = `pageTitle_${getSafeWinID(windowId)}`;
 const DETAILS_STORAGE_KEY = `details_${getSafeWinID(windowId)}`;
 const DUE_DATE_STORAGE_KEY = `dueDate_${getSafeWinID(windowId)}`;
 
+const STORAGE_WARNING_THRESHOLD = 85; // to test Storage Warning function set to 0.1   
+const STORAGE_CHECK_INTERVAL = 300000; // 5 minutes in milliseconds
+const STORAGE_WARNING_COOLDOWN = 3600000; // 1 hour in milliseconds 
+
 // Function to auto-expand textareas as user types
 function autoExpand(textarea) {
   textarea.style.height = 'auto'; // Reset height
@@ -96,120 +121,103 @@ function calculateTotalStorageSize() {
 }
 
 function updateLastBackupDisplay(timestamp) {
-  // console.log('updateLastBackupDisplay called');
-
-  // Remove existing display if any
   const existingDisplay = document.getElementById('lastBackupInfo');
   if (existingDisplay) {
-    // console.log('Removing existing backup display');
     existingDisplay.remove();
   }
 
   if (!timestamp) {
     timestamp = localStorage.getItem('lastBackupTimestamp');
-    // console.log('Retrieved timestamp from localStorage:', timestamp);
-    if (!timestamp) {
-      // console.log('No backup timestamp found');
-      return; // No backup recorded
-    }
   }
 
   const backupSection = document.querySelector('.backup-section');
-  // console.log('Backup section found:', !!backupSection);
-
   if (!backupSection) {
     console.warn('Backup section not found in DOM');
     return;
   }
 
-  const backupDate = new Date(timestamp);
   const now = new Date();
+  let diffHours = Infinity; // Treat "never backed up" as infinitely old
+  let diffDays = Infinity;
+  let backupDate = null;
 
-  // ⭐ FIXED: Calculate actual hours difference instead of calendar days
-  const diffTime = now - backupDate;
-  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  // Use exact hours for more precise messaging
-  let ageMessage = '';
-  if (diffHours < 24) {
-    ageMessage = `${diffHours} hours ago`;
-  } else {
-    ageMessage = `${diffDays} days ago`;
+  if (timestamp) {
+    backupDate = new Date(timestamp);
+    const diffTime = now - backupDate;
+    diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  //  console.log('Backup age calculations:', {  backupDate,      now,      diffHours,      diffDays,     isOver24Hours: diffHours >= 24   });
+  let ageMessage = 'Never backed up';
+  if (timestamp) {
+    if (diffHours < 24) {
+      ageMessage = `${diffHours} hours ago`;
+    } else {
+      ageMessage = `${diffDays} days ago`;
+    }
+  }
 
   // Create display element
   const backupInfo = document.createElement('div');
   backupInfo.id = 'lastBackupInfo';
+  const isOld = !timestamp || diffHours >= 24; // Never backed up counts as "old"
+
   backupInfo.style.cssText = `
     margin-top: 10px;
     padding: 8px;
     border-radius: 4px;
     font-size: 14px;
-    background: ${diffHours >= 24 ? '#fff3cd' : '#d4edda'};
-    border: 1px solid ${diffHours >= 24 ? '#ffeaa7' : '#c3e6cb'};
-    color: ${diffHours >= 24 ? '#856404' : '#155724'};
+    background: ${isOld ? '#fff3cd' : '#d4edda'};
+    border: 1px solid ${isOld ? '#ffeaa7' : '#c3e6cb'};
+    color: ${isOld ? '#856404' : '#155724'};
   `;
 
-
-
-
-
-
-
-
-
-  // Add storage info to backup display
   const storageSize = calculateTotalStorageSize();
   const storageMB = (storageSize / (1024 * 1024)).toFixed(2);
+  const formattedDate = timestamp ? backupDate.toLocaleString() : 'Never';
 
-
-
-  const formattedDate = backupDate.toLocaleString();
   backupInfo.innerHTML = `
     <strong>Last backup:</strong> ${formattedDate}<br>
     <small>(${ageMessage})</small>
     <br><small>Current storage: ${storageMB} MB / 5 MB</small>
-    ${diffHours >= 24 ? '<br>⚠️ Backup is over 24 hours old' : ''}
+    ${isOld ? '<br>⚠️ ' + (timestamp ? 'Backup is over 24 hours old' : 'No backup ever created') : ''}
   `;
 
-
-  // Add to backup section
   backupSection.appendChild(backupInfo);
-  // console.log('Backup info element added to DOM');
 
-  // ⭐ FIXED: Show alert only if truly older than 24 hours
-  if (diffHours >= 24) {
-    // console.log('Showing backup warning - over 24 hours old');
-    showBackupWarning(diffHours);
+  // ⭐ FIXED: Show alert for never-backed-up OR over 24 hours
+  if (!timestamp || diffHours >= 24) {
+    showBackupWarning(timestamp ? diffHours : Infinity);
   }
 }
 
-
-
 function showBackupWarning(hoursOld) {
-  // Only show alert once per session to avoid annoying users
   const lastWarning = localStorage.getItem('lastBackupWarning');
   const now = new Date().getTime();
 
-  // Convert hours to days for better message
-  const daysOld = Math.floor(hoursOld / 24);
-  const remainingHours = hoursOld % 24;
-
   let timeMessage;
-  if (daysOld > 0) {
-    timeMessage = `${daysOld} day${daysOld !== 1 ? 's' : ''}`;
-    if (remainingHours > 0) {
-      timeMessage += ` and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
-    }
+  if (hoursOld === Infinity) {
+    timeMessage = 'never (first time)';
   } else {
-    timeMessage = `${hoursOld} hours`;
+    const daysOld = Math.floor(hoursOld / 24);
+    const remainingHours = hoursOld % 24;
+
+    if (daysOld > 0) {
+      timeMessage = `${daysOld} day${daysOld !== 1 ? 's' : ''}`;
+      if (remainingHours > 0) {
+        timeMessage += ` and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+      }
+    } else {
+      timeMessage = `${hoursOld} hours`;
+    }
   }
 
-  if (!lastWarning || (now - parseInt(lastWarning)) > 3600000) { // 1 hour cooldown
-    alert(`⚠️ Backup Warning\n\nYour last backup was ${timeMessage} old. Consider creating a new backup to protect your data.`);
+  if (!lastWarning || (now - parseInt(lastWarning)) > 3600000) {
+    const message = hoursOld === Infinity
+      ? `⚠️ First Backup Recommended\n\nYou've never created a backup. Consider creating your first backup to protect your data.`
+      : `⚠️ Backup Warning\n\nYour last backup was ${timeMessage} old. Consider creating a new backup to protect your data.`;
+
+    alert(message);
     localStorage.setItem('lastBackupWarning', now.toString());
   }
 }
@@ -218,40 +226,62 @@ function showBackupWarning(hoursOld) {
 
 
 
-
 function checkStorageRegularly() {
-
-  // TEST: Change to 0.1% instead of 85% for easy testing  stefano 
-  const TEST_THRESHOLD = 0.1; // 0.1% instead of 85%
-
-  // Check storage every 5 minutes
   setInterval(() => {
     const totalSize = calculateTotalStorageSize();
     const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-    // alert(usagePercentage);
+    const usagePercentNum = parseFloat(usagePercentage);
 
-    if (usagePercentage > TEST_THRESHOLD) {
-      // Update stats display with warning
+    // Check cooldown BEFORE calling showSimpleStats
+    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+    const now = new Date().getTime();
+    const lastWarningTime = lastStorageWarning ? parseInt(lastStorageWarning) : 0;
+    const timeSinceLastWarning = now - lastWarningTime;
+
+    if (usagePercentNum > STORAGE_WARNING_THRESHOLD &&
+      (!lastStorageWarning || timeSinceLastWarning > STORAGE_WARNING_COOLDOWN)) {
       showSimpleStats();
     }
-  }, 5000); // 5 minutes = 300000
+  }, STORAGE_CHECK_INTERVAL);
 }
-
-
 
 function showStorageWarning(usagePercentage, totalSizeMB) {
-  // Only show alert once per session to avoid annoying users
-  const lastStorageWarning = localStorage.getItem('lastStorageWarning');
-  const now = new Date().getTime();
+  try {
+    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+    const now = new Date().getTime();
 
-  if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
-    alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
-    localStorage.setItem('lastStorageWarning', now.toString());
+    console.log('🔍 showStorageWarning called:', {
+      usagePercentage,
+      totalSizeMB,
+      lastStorageWarning,
+      now,
+      shouldShow: !lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000
+    });
+
+    // Safely parse the stored timestamp
+    const lastWarningTime = lastStorageWarning ? parseInt(lastStorageWarning) : 0;
+
+    // Check if cooldown period has passed (or never set)
+    const timeSinceLastWarning = now - lastWarningTime;
+    const shouldShowAlert = !lastStorageWarning || timeSinceLastWarning > STORAGE_WARNING_COOLDOWN;
+
+    console.log('🔍 Cooldown Check:', {
+      lastWarningTime,
+      now,
+      timeSinceLastWarning,
+      shouldShowAlert
+    });
+
+    if (shouldShowAlert) {
+      alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).`);
+      localStorage.setItem('lastStorageWarning', now.toString());
+    }
+  } catch (error) {
+    console.error('Error in showStorageWarning:', error);
+    // Fallback: show alert anyway
+    alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).`);
   }
 }
-
-
-
 
 function showSimpleStats() {
   // Remove existing stats if any
@@ -305,9 +335,10 @@ function showSimpleStats() {
   // Add to session management section
   const sessionManagement = document.querySelector('.session-management');
   sessionManagement.appendChild(statsElement);
-
-  // Show warning alert if critically close to limit
-  if (usagePercentage > 90) {
+  // console.log('🔍 showSimpleStats - usagePercentage:', usagePercentage);
+  // Show warning alert if critically close to limit // as defined in STORAGE_WARNING_THRESHOLD 
+  if (usagePercentage > STORAGE_WARNING_THRESHOLD) {
+    // console.log('🔍 Calling showStorageWarning...');
     showStorageWarning(usagePercentage, totalSizeMB);
   }
 
@@ -849,6 +880,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
       // Get all data for this window
       const title = localStorage.getItem(`pageTitle_${getSafeWinID(windowId)}`) || '';
+      // But windowId might already be prefixed from earlier parsing!
+      // Add debug: 
+      // console.log('🔍 loadSessions windowId:', windowId);
+
       const details = localStorage.getItem(`details_${getSafeWinID(windowId)}`) || '';
       const dueDate = localStorage.getItem(`dueDate_${getSafeWinID(windowId)}`) || '';
 
