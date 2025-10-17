@@ -27,13 +27,13 @@
           <span class="days-indicator" id="daysIndicator"></span>
         </div>
       </div>
-      <div id="counter" class="counter">0/80 characters</div>
+      <div id="counter" class="counter">80 Restbuchstaben</div>
     </div>
 
     <div class="input-group">
       <label for="enterNewDetails">Details & Gedanken <span>zu dieser Aufgaben-Gruppe</span>:</label>
       <textarea id="enterNewDetails" placeholder="Add your detailed thoughts here..." maxlength="600"></textarea>
-      <div id="detailsCounter" class="counter">0/600 characters</div>
+      <div id="detailsCounter" class="counter">Restbuchstaben: 600</div>
     </div>
 
     <!-- Task List Section -->
@@ -76,6 +76,8 @@
 
   <!-- AI-SPECIFIC DOCUMENTATION START -->
   <!--
+            URL Parameters (source of truth) →    localStorage Cache (performance) → UI Display (render)
+            
             ARCHITECTURE: distributed-single-task-system
             PATTERN: one-tab-group-per-task 
             DATA_FLOW: cross-tab-localstorage-sync
@@ -86,7 +88,7 @@
             TECH_STACK: vanilla-js, localStorage, url-parameters
             SYNC_MECHANISM: localStorage-event-bus
             UNIQUE_ID_SYSTEM: win_xxxxxxxxx
-            PRIORITY: url-params-over-localstorage
+            PRIORITY: url-params-over-localstorage 
             -->
   <!-- AI-SPECIFIC DOCUMENTATION END -->
 
@@ -173,130 +175,152 @@
           </p>
         </div>
       </div>
-
-      <h2>Key Features</h2>
-      <ul>
-        <li>
-          <strong>One Task Per Tab:</strong> Each STT manages exactly one
-          primary task for its tab group
-        </li>
-        <li>
-          <strong>Cross-Window Awareness:</strong> All STTs see each other's
-          tasks in real-time
-        </li>
-        <li>
-          <strong>URL Parameter Sync:</strong> Task data is shared via URL
-          parameters for easy sharing
-        </li>
-        <li>
-          <strong>Due Date Tracking:</strong> Visual indicators for past
-          due/upcoming tasks
-        </li>
-        <li>
-          <strong>Keystroke-Aware Updates:</strong> Real-time sync triggered
-          by typing activity
-        </li>
-        <li>
-          <strong>Chrome Sync Compatible:</strong> Tab groups sync across
-          devices via Chrome's built-in synchronization
-        </li>
-        <li>
-          <strong>Backup System:</strong> Import/export functionality for all
-          your tasks
-        </li>
-      </ul>
-
-      <h2>Workflow & Navigation</h2>
-      <ul>
-        <li>
-          Use <span class="key-combo">Alt</span> +
-          <span class="key-combo">Tab</span> on Windows to quickly switch
-          between task windows
-        </li>
-        <li>
-          Use <span class="key-combo">Ctrl</span> +
-          <span class="key-combo">Shift</span> +
-          <span class="key-combo">A</span> in Chrome to jump between windows
-          quickly
-        </li>
-        <li>
-          Keep the STT tab active in each Chrome window for instant overview
-          when switching
-        </li>
-        <li>Prefix task titles with group numbers for easy identification</li>
-        <li>
-          Use due dates to track time-sensitive tasks waiting for feedback
-        </li>
-      </ul>
-
-      <div class="tip">
-        <strong>Pro Tip:</strong> Manually number your Chrome Tab Groups and
-        use the same number as the first characters in your task title for
-        visual organization across all your STTs.
+      <div class="feature-card">
+        <h3>💾 LocalStorage Communication</h3>
+        <p>
+          Shared communication bus between all open windows/tabs enables
+          cross-window task awareness.
+        </p>
       </div>
-
-      <h2>Technical Implementation</h2>
-      <ul>
-        <li>
-          Each STT gets a unique ID (<span class="code">win_xxxxxxxxx</span>)
-        </li>
-        <li>
-          Data is stored with key prefixes:
-          <span class="code">pageTitle_win_xxx</span>,
-          <span class="code">details_win_xxx</span>
-        </li>
-        <li>
-          The "Task List" shows
-          <strong>all active tasks including the current tab</strong>
-        </li>
-        <li>
-          Keystroke-aware refresh keeps everything in sync (not just periodic
-          updates)
-        </li>
-        <li>Tasks are categorized into: Past Due / Undated / Upcoming</li>
-        <li>
-          URL parameters store task data:
-          <span class="code">?win=id&title=text&details=text&dueDate=YYYY-MM-DD</span>
-        </li>
-        <li>
-          Priority System: URL parameters take precedence over local storage,
-          enabling sharing across devices via synced Grouped Tabs in Chrome.
-        </li>
-      </ul>
-
-      <h2>Keyboard Shortcuts</h2>
-      <ul>
-        <li>
-          <span class="key-combo">Ctrl</span> +
-          <span class="key-combo">S</span>: Save backup
-        </li>
-        <li>
-          <span class="key-combo">Ctrl</span> +
-          <span class="key-combo">R</span>: Refresh task list
-        </li>
-        <li>
-          <span class="key-combo">Esc</span>: Clear focus from current field
-        </li>
-      </ul>
-      <h2>Mobile Synchronization</h2>
-      <p>
-        Your Chrome tab groups (and thus your STT pages) will automatically
-        sync with your mobile device through Chrome's built-in synchronization
-        features, maintaining your multi-window workspace across devices.
-      </p>
-
-      <h2>Sharing Tasks</h2>
-      <p>
-        Since task data is encoded in URL parameters, you can share individual
-        tasks simply by copying the URL. When opened, the recipient will see
-        the exact task content you've created.
-      </p>
     </div>
 
-    <button alt="Close Documentation" onclick="document.getElementById('docsModal').style.display='none'"
-      id="closeButton">
-      X
-    </button>
+    <h2>Key Features</h2>
+    <ul>
+      <li>
+        <strong>One Task Per Tab:</strong> Each STT manages exactly one
+        primary task for its tab group
+      </li>
+      <li>
+        <strong>Cross-Window Awareness:</strong> All STTs see each other's
+        tasks in real-time
+      </li>
+      <li>
+        <strong>URL Parameter Sync:</strong> Task data is shared via URL
+        parameters for easy sharing
+      </li>
+      <li>
+        <strong>Due Date Tracking:</strong> Visual indicators for past
+        due/upcoming tasks
+      </li>
+      <li>
+        <strong>Keystroke-Aware Updates:</strong> Real-time sync triggered
+        by typing activity
+      </li>
+      <li>
+        <strong>Chrome Sync Compatible:</strong> Tab groups sync across
+        devices via Chrome's built-in synchronization
+      </li>
+      <li>
+        <strong>Backup System:</strong> Import/export functionality for all
+        your tasks
+      </li>
+      <li>
+        <strong>URL-First Architecture</strong>: Tasks are synchronized via URL parameters for reliable cross-device
+        compatibility
+      </li>
+      <li>
+        <strong>Event Delegation</strong>: All task actions use efficient event delegation for dynamic content
+      </li>
+      <li>
+        <strong>LocalStorage as Cache</strong>: Browser storage acts as performance cache while URLs maintain data
+        integrity
+      </li>
+      <li>
+        <strong>Cross-Device Sync</strong>: Share task URLs across devices via browser tab syncing
+      </li>
+    </ul>
+
+    <h2>Workflow & Navigation</h2>
+    <ul>
+      <li>
+        Use <span class="key-combo">Alt</span> +
+        <span class="key-combo">Tab</span> on Windows to quickly switch
+        between task windows
+      </li>
+      <li>
+        Use <span class="key-combo">Ctrl</span> +
+        <span class="key-combo">Shift</span> +
+        <span class="key-combo">A</span> in Chrome to jump between windows
+        quickly
+      </li>
+      <li>
+        Keep the STT tab active in each Chrome window for instant overview
+        when switching
+      </li>
+      <li>Prefix task titles with group numbers for easy identification</li>
+      <li>
+        Use due dates to track time-sensitive tasks waiting for feedback
+      </li>
+    </ul>
+
+    <div class="tip">
+      <strong>Pro Tip:</strong> Manually number your Chrome Tab Groups and
+      use the same number as the first characters in your task title for
+      visual organization across all your STTs.
+    </div>
+
+    <h2>Technical Implementation</h2>
+    <ul>
+      <li>
+        Each STT gets a unique ID (<span class="code">win_xxxxxxxxx</span>)
+      </li>
+      <li>
+        Data is stored with key prefixes:
+        <span class="code">pageTitle_win_xxx</span>,
+        <span class="code">details_win_xxx</span>
+      </li>
+      <li>
+        The "Task List" shows
+        <strong>all active tasks including the current tab</strong>
+      </li>
+      <li>
+        Keystroke-aware refresh keeps everything in sync (not just periodic
+        updates)
+      </li>
+      <li>Tasks are categorized into: Past Due / Undated / Upcoming</li>
+      <li>
+        URL parameters store task data:
+        <span class="code">?win=id&title=text&details=text&dueDate=YYYY-MM-DD</span>
+      </li>
+      <li>
+        Priority System: URL parameters take precedence over local storage,
+        enabling sharing across devices via synced Grouped Tabs in Chrome.
+      </li>
+    </ul>
+
+    <h2>Keyboard Shortcuts</h2>
+    <ul>
+      <li>
+        <span class="key-combo">Ctrl</span> +
+        <span class="key-combo">S</span>: Save backup
+      </li>
+      <li>
+        <span class="key-combo">Ctrl</span> +
+        <span class="key-combo">R</span>: Refresh task list
+      </li>
+      <li>
+        <span class="key-combo">Esc</span>: Clear focus from current field
+      </li>
+    </ul>
+    <h2>Mobile Synchronization</h2>
+    <p>
+      Your Chrome tab groups (and thus your STT pages) will automatically
+      sync with your mobile device through Chrome's built-in synchronization
+      features, maintaining your multi-window workspace across devices.
+    </p>
+
+    <h2>Sharing Tasks</h2>
+    <p>
+      Since task data is encoded in URL parameters, you can share individual
+      tasks simply by copying the URL. When opened, the recipient will see
+      the exact task content you've created.
+    </p>
+  </div>
+
+  <button alt="Close Documentation" onclick="document.getElementById('docsModal').style.display='none'"
+    id="closeButton">
+    X
+  </button>
   </div>
   <!-- Documentation Modal END -->
 
