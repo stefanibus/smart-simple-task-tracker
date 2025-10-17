@@ -1,3 +1,52 @@
+// START TEMPORARY DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
+// ENHANCED DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
+console.log('=== ENHANCED DEBUG MODE ===');
+
+// Track localStorage operations more precisely
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function (key, value) {
+  console.log('📝 localStorage SET:', key, '=', value);
+
+  // Specifically track task-related keys
+  if (key.startsWith('pageTitle_') || key.startsWith('details_')) {
+    console.log('🔴 TASK STORAGE - Key pattern:', key);
+    if (key.includes('win_win_')) {
+      console.log('🚨 BUG DETECTED: Double "win_" in key!');
+    }
+  }
+
+  return originalSetItem.apply(this, arguments);
+};
+
+// Track ALL localStorage reads too
+const originalGetItem = localStorage.getItem;
+localStorage.getItem = function (key) {
+  const value = originalGetItem.apply(this, arguments);
+  if (key.startsWith('pageTitle_') || key.startsWith('details_')) {
+    console.log('📖 localStorage GET:', key, '=', value);
+  }
+  return value;
+};
+
+// Track URL parsing
+console.log('🔗 Initial URL:', window.location.href);
+console.log('🔗 Search params:', window.location.search);
+console.log('🔗 Hash:', window.location.hash);
+
+// Track the exact moment when URL gets modified
+let urlChangeCount = 0;
+const originalReplaceState = history.replaceState;
+history.replaceState = function (state, title, url) {
+  console.log('🔄 History.replaceState called:', url);
+  urlChangeCount++;
+  return originalReplaceState.apply(this, arguments);
+};
+
+// Track specific function calls we need to find
+console.log('=== Looking for initialization functions ===');
+// END TEMPORARY DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
+
+
 // Generate a unique ID for this window/tab - URL-FIRST approach
 // This allows multiple task windows to coexist without interfering
 const generateWindowId = () => {
@@ -542,9 +591,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== EVENT LISTENERS FOR TYPING =====
   // Title textarea input listener with debouncing
   titleTextarea.addEventListener('input', function () {
-   // console.log('Title input detected:', this.value);
-   // console.log('WindowId:', windowId);
-   // console.log('Storage key would be:', `pageTitle_win_${windowId}`);
+    // console.log('Title input detected:', this.value);
+    // console.log('WindowId:', windowId);
+    // console.log('Storage key would be:', `pageTitle_win_${windowId}`);
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -781,7 +830,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Update character counter for details textarea
   function updateDetailsCounter() {
     const length = detailsTextarea.value.length;
-    detailsCounter.textContent = `${600 - length} Restbuchstaben`;
+    detailsCounter.textContent = `Restbuchstaben: ${600 - length}`;
 
     // Add warning style when approaching character limit
     if (length > 580) {  // Warn when 20 characters remaining
@@ -1209,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Delete a task session with confirmation
   function deleteSession(windowId, taskTitle) {
-   // console.log('deleteSession called with:', windowId, taskTitle);
+    // console.log('deleteSession called with:', windowId, taskTitle);
 
     // Handle empty/untitled tasks better
     const displayTitle = taskTitle && taskTitle !== "''" ? taskTitle : 'Untitled Task';

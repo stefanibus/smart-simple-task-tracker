@@ -214,7 +214,7 @@ textarea::placeholder {
 
 #detailsCounter {
   position: absolute;
-  right: 20px;
+  left: 20px;
   top: 48px;
   color: white;
 }
