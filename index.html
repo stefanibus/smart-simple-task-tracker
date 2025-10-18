@@ -89,8 +89,19 @@
             SYNC_MECHANISM: localStorage-event-bus
             UNIQUE_ID_SYSTEM: win_xxxxxxxxx
             PRIORITY: url-params-over-localstorage 
+            
+            RECENT_FIXES: winid-normalization-system-implemented
+            KEY_CHANGE: url-parameters-now-trusted-for-winid-generation
+            STORAGE_KEY_FORMAT: prefix_${getSafeWinID(windowId)}
+            DUPLICATION_PROTECTION: double-win_-prefix-prevention
+            EMPTY_TASK_HANDLING: all-tasks-visible-including-empty-ones
+            STORAGE_MONITORING: 85%-threshold-with-cooldown
+            BACKUP_WARNINGS: first-time-and-stale-backup-alerts
             -->
   <!-- AI-SPECIFIC DOCUMENTATION END -->
+
+
+
 
   <!-- Documentation Modal START -->
   <div id="docsModal" style="display: none">
@@ -121,6 +132,20 @@
           <strong>Key Innovation:</strong> Keystroke-aware updates with
           aggregated task view across all open tabs
         </p>
+
+
+        <!-- ADD THIS SECTION -->
+        <div style="margin-top: 10px; padding: 10px; background: #e8f5e8; border-radius: 4px;">
+          <strong>🎯 Recent Architecture Updates:</strong>
+          <ul style="margin: 5px 0; padding-left: 20px;">
+            <li><strong>WinID Normalization:</strong> Prevents duplicate entries via getSafeWinID() system</li>
+            <li><strong>URL-First Trust:</strong> URL parameters trusted over localStorage for winID generation</li>
+            <li><strong>Empty Task Visibility:</strong> All tasks displayed, including empty ones for cleanup</li>
+            <li><strong>Storage Monitoring:</strong> 85% threshold alerts with 1-hour cooldown</li>
+          </ul>
+        </div>
+
+
       </div>
 
       <div class="core-concept">
