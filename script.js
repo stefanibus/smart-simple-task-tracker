@@ -1,63 +1,56 @@
-// START TEMPORARY DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
-// ENHANCED DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
-console.log('=== ENHANCED DEBUG MODE ===');
+// START  ==> WINID NORMALIZATION SYSTEM
+function normalizeWinID(winID) {
+  if (!winID || typeof winID !== 'string') return winID;
 
-// Track localStorage operations more precisely
-const originalSetItem = localStorage.setItem;
-localStorage.setItem = function (key, value) {
-  console.log('📝 localStorage SET:', key, '=', value);
-
-  // Specifically track task-related keys
-  if (key.startsWith('pageTitle_') || key.startsWith('details_')) {
-    console.log('🔴 TASK STORAGE - Key pattern:', key);
-    if (key.includes('win_win_')) {
-      console.log('🚨 BUG DETECTED: Double "win_" in key!');
-    }
+  let cleanWinID = winID.replace(/^win_/, '');
+  // ALERT IF WE STILL HAVE DOUBLE win_ PREFIXES
+  if (cleanWinID !== winID) {   // console.log(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
+    alert(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
   }
 
-  return originalSetItem.apply(this, arguments);
-};
-
-// Track ALL localStorage reads too
-const originalGetItem = localStorage.getItem;
-localStorage.getItem = function (key) {
-  const value = originalGetItem.apply(this, arguments);
-  if (key.startsWith('pageTitle_') || key.startsWith('details_')) {
-    console.log('📖 localStorage GET:', key, '=', value);
+  return cleanWinID;
+}
+function getSafeWinID(winID) {
+  if (!winID) return generateNewWinID();
+  // If it already has win_ prefix, return as-is (NO NORMALIZATION NEEDED)
+  if (winID.startsWith('win_')) {
+    return winID;
   }
-  return value;
+
+  // Otherwise, add the prefix
+  return `win_${winID}`;
+}
+function generateNewWinID() {
+  return 'win_' + Math.random().toString(36).substring(2, 12);
 };
 
-// Track URL parsing
-console.log('🔗 Initial URL:', window.location.href);
-console.log('🔗 Search params:', window.location.search);
-console.log('🔗 Hash:', window.location.hash);
+function normalizeWinID(winID) {
+  if (!winID || typeof winID !== 'string') return winID;
 
-// Track the exact moment when URL gets modified
-let urlChangeCount = 0;
-const originalReplaceState = history.replaceState;
-history.replaceState = function (state, title, url) {
-  console.log('🔄 History.replaceState called:', url);
-  urlChangeCount++;
-  return originalReplaceState.apply(this, arguments);
-};
+  let cleanWinID = winID.replace(/^win_/, '');
 
-// Track specific function calls we need to find
-console.log('=== Looking for initialization functions ===');
-// END TEMPORARY DEBUG CODE - ADD THIS AT TOP OF YOUR JS FILE
+  // This alert should NEVER fire now with the fixed getSafeWinID
+  if (cleanWinID !== winID) {
+    console.log('🚨 DOUBLE win_ DETECTED! This should not happen anymore!');
+    console.log('Input:', winID, 'Output:', cleanWinID);
+    console.trace('📍 This indicates a logic error in getSafeWinID');
+  }
 
+  return cleanWinID;
+}
+// END  ==> WINID NORMALIZATION SYSTEM
 
 // Generate a unique ID for this window/tab - URL-FIRST approach
 // This allows multiple task windows to coexist without interfering
 const generateWindowId = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const urlWinId = urlParams.get('win');
+  const urlWinId = getSafeWinID(urlParams.get('win'));
 
   // ALWAYS trust the URL for cross-device sync compatibility
   // If URL already has a window ID, use it and set hash for backward compatibility 
   if (urlWinId) {
-    const titleExists = localStorage.getItem(`pageTitle_win_${urlWinId}`);
-    const detailsExists = localStorage.getItem(`details_win_${urlWinId}`);
+    const titleExists = localStorage.getItem(`pageTitle_${urlWinId}`); // FIXED: use urlWinId directly
+    const detailsExists = localStorage.getItem(`details_${urlWinId}`); // FIXED: use urlWinId directly
     const urlTitle = urlParams.get('title');
     const urlDetails = urlParams.get('details');
 
@@ -66,18 +59,21 @@ const generateWindowId = () => {
       // console.log('Initializing stale URL with fresh data');
 
       if (urlTitle) {
-        localStorage.setItem(`pageTitle_win_${urlWinId}`, urlTitle);
-        localStorage.setItem(`timestamp_pageTitle_win_${urlWinId}`, Date.now().toString());
+        // FIXED: Use urlWinId instead of undefined windowId
+        localStorage.setItem(`pageTitle_${urlWinId}`, urlTitle); // FIXED: use urlTitle from URL
+        localStorage.setItem(`timestamp_pageTitle_${urlWinId}`, Date.now().toString());
       }
       if (urlDetails) {
-        localStorage.setItem(`details_win_${urlWinId}`, urlDetails);
-        localStorage.setItem(`timestamp_details_win_${urlWinId}`, Date.now().toString());
+        // FIXED: Use urlWinId instead of undefined windowId  
+        localStorage.setItem(`details_${urlWinId}`, urlDetails); // FIXED: use urlDetails from URL
+        localStorage.setItem(`timestamp_details_${urlWinId}`, Date.now().toString());
       }
     }
+    return urlWinId; // ADD THIS: Return the URL winId since we're using it
   }
   // If hash exists but not in URL params, sync them 
   if (window.location.hash) {
-    const hashId = window.location.hash.substring(1);
+    const hashId = getSafeWinID(window.location.hash.substring(1)); // NORMALIZE!
     const tempURL = new URL(window.location);
     tempURL.searchParams.set('win', hashId);
     tempURL.hash = hashId;
@@ -99,9 +95,13 @@ const windowId = generateWindowId();
 
 // Define storage keys for this specific window/tab
 // This prevents data collisions between multiple task windows
-const TITLE_STORAGE_KEY = `pageTitle_${windowId}`;
-const DETAILS_STORAGE_KEY = `details_${windowId}`;
-const DUE_DATE_STORAGE_KEY = `dueDate_${windowId}`;
+const TITLE_STORAGE_KEY = `pageTitle_${getSafeWinID(windowId)}`;
+const DETAILS_STORAGE_KEY = `details_${getSafeWinID(windowId)}`;
+const DUE_DATE_STORAGE_KEY = `dueDate_${getSafeWinID(windowId)}`;
+
+const STORAGE_WARNING_THRESHOLD = 85; // to test Storage Warning function set to 0.1   
+const STORAGE_CHECK_INTERVAL = 300000; // 5 minutes in milliseconds
+const STORAGE_WARNING_COOLDOWN = 3600000; // 1 hour in milliseconds 
 
 // Function to auto-expand textareas as user types
 function autoExpand(textarea) {
@@ -121,120 +121,103 @@ function calculateTotalStorageSize() {
 }
 
 function updateLastBackupDisplay(timestamp) {
-  // console.log('updateLastBackupDisplay called');
-
-  // Remove existing display if any
   const existingDisplay = document.getElementById('lastBackupInfo');
   if (existingDisplay) {
-    // console.log('Removing existing backup display');
     existingDisplay.remove();
   }
 
   if (!timestamp) {
     timestamp = localStorage.getItem('lastBackupTimestamp');
-    // console.log('Retrieved timestamp from localStorage:', timestamp);
-    if (!timestamp) {
-      // console.log('No backup timestamp found');
-      return; // No backup recorded
-    }
   }
 
   const backupSection = document.querySelector('.backup-section');
-  // console.log('Backup section found:', !!backupSection);
-
   if (!backupSection) {
     console.warn('Backup section not found in DOM');
     return;
   }
 
-  const backupDate = new Date(timestamp);
   const now = new Date();
+  let diffHours = Infinity; // Treat "never backed up" as infinitely old
+  let diffDays = Infinity;
+  let backupDate = null;
 
-  // ⭐ FIXED: Calculate actual hours difference instead of calendar days
-  const diffTime = now - backupDate;
-  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-  // Use exact hours for more precise messaging
-  let ageMessage = '';
-  if (diffHours < 24) {
-    ageMessage = `${diffHours} hours ago`;
-  } else {
-    ageMessage = `${diffDays} days ago`;
+  if (timestamp) {
+    backupDate = new Date(timestamp);
+    const diffTime = now - backupDate;
+    diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
-  //  console.log('Backup age calculations:', {  backupDate,      now,      diffHours,      diffDays,     isOver24Hours: diffHours >= 24   });
+  let ageMessage = 'Never backed up';
+  if (timestamp) {
+    if (diffHours < 24) {
+      ageMessage = `${diffHours} hours ago`;
+    } else {
+      ageMessage = `${diffDays} days ago`;
+    }
+  }
 
   // Create display element
   const backupInfo = document.createElement('div');
   backupInfo.id = 'lastBackupInfo';
+  const isOld = !timestamp || diffHours >= 24; // Never backed up counts as "old"
+
   backupInfo.style.cssText = `
     margin-top: 10px;
     padding: 8px;
     border-radius: 4px;
     font-size: 14px;
-    background: ${diffHours >= 24 ? '#fff3cd' : '#d4edda'};
-    border: 1px solid ${diffHours >= 24 ? '#ffeaa7' : '#c3e6cb'};
-    color: ${diffHours >= 24 ? '#856404' : '#155724'};
+    background: ${isOld ? '#fff3cd' : '#d4edda'};
+    border: 1px solid ${isOld ? '#ffeaa7' : '#c3e6cb'};
+    color: ${isOld ? '#856404' : '#155724'};
   `;
 
-
-
-
-
-
-
-
-
-  // Add storage info to backup display
   const storageSize = calculateTotalStorageSize();
   const storageMB = (storageSize / (1024 * 1024)).toFixed(2);
+  const formattedDate = timestamp ? backupDate.toLocaleString() : 'Never';
 
-
-
-  const formattedDate = backupDate.toLocaleString();
   backupInfo.innerHTML = `
     <strong>Last backup:</strong> ${formattedDate}<br>
     <small>(${ageMessage})</small>
     <br><small>Current storage: ${storageMB} MB / 5 MB</small>
-    ${diffHours >= 24 ? '<br>⚠️ Backup is over 24 hours old' : ''}
+    ${isOld ? '<br>⚠️ ' + (timestamp ? 'Backup is over 24 hours old' : 'No backup ever created') : ''}
   `;
 
-
-  // Add to backup section
   backupSection.appendChild(backupInfo);
-  // console.log('Backup info element added to DOM');
 
-  // ⭐ FIXED: Show alert only if truly older than 24 hours
-  if (diffHours >= 24) {
-    // console.log('Showing backup warning - over 24 hours old');
-    showBackupWarning(diffHours);
+  // ⭐ FIXED: Show alert for never-backed-up OR over 24 hours
+  if (!timestamp || diffHours >= 24) {
+    showBackupWarning(timestamp ? diffHours : Infinity);
   }
 }
 
-
-
 function showBackupWarning(hoursOld) {
-  // Only show alert once per session to avoid annoying users
   const lastWarning = localStorage.getItem('lastBackupWarning');
   const now = new Date().getTime();
 
-  // Convert hours to days for better message
-  const daysOld = Math.floor(hoursOld / 24);
-  const remainingHours = hoursOld % 24;
-
   let timeMessage;
-  if (daysOld > 0) {
-    timeMessage = `${daysOld} day${daysOld !== 1 ? 's' : ''}`;
-    if (remainingHours > 0) {
-      timeMessage += ` and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
-    }
+  if (hoursOld === Infinity) {
+    timeMessage = 'never (first time)';
   } else {
-    timeMessage = `${hoursOld} hours`;
+    const daysOld = Math.floor(hoursOld / 24);
+    const remainingHours = hoursOld % 24;
+
+    if (daysOld > 0) {
+      timeMessage = `${daysOld} day${daysOld !== 1 ? 's' : ''}`;
+      if (remainingHours > 0) {
+        timeMessage += ` and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
+      }
+    } else {
+      timeMessage = `${hoursOld} hours`;
+    }
   }
 
-  if (!lastWarning || (now - parseInt(lastWarning)) > 3600000) { // 1 hour cooldown
-    alert(`⚠️ Backup Warning\n\nYour last backup was ${timeMessage} old. Consider creating a new backup to protect your data.`);
+  if (!lastWarning || (now - parseInt(lastWarning)) > 3600000) {
+    const message = hoursOld === Infinity
+      ? `⚠️ First Backup Recommended\n\nYou've never created a backup. Consider creating your first backup to protect your data.`
+      : `⚠️ Backup Warning\n\nYour last backup was ${timeMessage} old. Consider creating a new backup to protect your data.`;
+
+    alert(message);
     localStorage.setItem('lastBackupWarning', now.toString());
   }
 }
@@ -243,40 +226,62 @@ function showBackupWarning(hoursOld) {
 
 
 
-
 function checkStorageRegularly() {
-
-  // TEST: Change to 0.1% instead of 85% for easy testing  stefano 
-  const TEST_THRESHOLD = 0.1; // 0.1% instead of 85%
-
-  // Check storage every 5 minutes
   setInterval(() => {
     const totalSize = calculateTotalStorageSize();
     const usagePercentage = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-    // alert(usagePercentage);
+    const usagePercentNum = parseFloat(usagePercentage);
 
-    if (usagePercentage > TEST_THRESHOLD) {
-      // Update stats display with warning
+    // Check cooldown BEFORE calling showSimpleStats
+    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+    const now = new Date().getTime();
+    const lastWarningTime = lastStorageWarning ? parseInt(lastStorageWarning) : 0;
+    const timeSinceLastWarning = now - lastWarningTime;
+
+    if (usagePercentNum > STORAGE_WARNING_THRESHOLD &&
+      (!lastStorageWarning || timeSinceLastWarning > STORAGE_WARNING_COOLDOWN)) {
       showSimpleStats();
     }
-  }, 5000); // 5 minutes = 300000
+  }, STORAGE_CHECK_INTERVAL);
 }
-
-
 
 function showStorageWarning(usagePercentage, totalSizeMB) {
-  // Only show alert once per session to avoid annoying users
-  const lastStorageWarning = localStorage.getItem('lastStorageWarning');
-  const now = new Date().getTime();
+  try {
+    const lastStorageWarning = localStorage.getItem('lastStorageWarning');
+    const now = new Date().getTime();
 
-  if (!lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000) { // 1 hour cooldown
-    alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).\n\nConsider:\n1. Deleting old tasks\n2. Exporting backups and clearing data\n3. Being mindful of new task creation`);
-    localStorage.setItem('lastStorageWarning', now.toString());
+    console.log('🔍 showStorageWarning called:', {
+      usagePercentage,
+      totalSizeMB,
+      lastStorageWarning,
+      now,
+      shouldShow: !lastStorageWarning || (now - parseInt(lastStorageWarning)) > 3600000
+    });
+
+    // Safely parse the stored timestamp
+    const lastWarningTime = lastStorageWarning ? parseInt(lastStorageWarning) : 0;
+
+    // Check if cooldown period has passed (or never set)
+    const timeSinceLastWarning = now - lastWarningTime;
+    const shouldShowAlert = !lastStorageWarning || timeSinceLastWarning > STORAGE_WARNING_COOLDOWN;
+
+    console.log('🔍 Cooldown Check:', {
+      lastWarningTime,
+      now,
+      timeSinceLastWarning,
+      shouldShowAlert
+    });
+
+    if (shouldShowAlert) {
+      alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).`);
+      localStorage.setItem('lastStorageWarning', now.toString());
+    }
+  } catch (error) {
+    console.error('Error in showStorageWarning:', error);
+    // Fallback: show alert anyway
+    alert(`⚠️ Storage Warning\n\nYour localStorage is at ${usagePercentage}% capacity (${totalSizeMB} MB used).`);
   }
 }
-
-
-
 
 function showSimpleStats() {
   // Remove existing stats if any
@@ -293,7 +298,7 @@ function showSimpleStats() {
   // Count sessions separately if needed
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key.startsWith('pageTitle_win_')) {
+    if (key.startsWith('pageTitle_')) { // REMOVED 'win_' from pattern
       sessions.push(key);
     }
   }
@@ -330,9 +335,10 @@ function showSimpleStats() {
   // Add to session management section
   const sessionManagement = document.querySelector('.session-management');
   sessionManagement.appendChild(statsElement);
-
-  // Show warning alert if critically close to limit
-  if (usagePercentage > 90) {
+  // console.log('🔍 showSimpleStats - usagePercentage:', usagePercentage);
+  // Show warning alert if critically close to limit // as defined in STORAGE_WARNING_THRESHOLD 
+  if (usagePercentage > STORAGE_WARNING_THRESHOLD) {
+    // console.log('🔍 Calling showStorageWarning...');
     showStorageWarning(usagePercentage, totalSizeMB);
   }
 
@@ -591,9 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== EVENT LISTENERS FOR TYPING =====
   // Title textarea input listener with debouncing
   titleTextarea.addEventListener('input', function () {
-    // console.log('Title input detected:', this.value);
-    // console.log('WindowId:', windowId);
-    // console.log('Storage key would be:', `pageTitle_win_${windowId}`);
+    // console.log('Title input detected:', this.value); // console.log('WindowId:', windowId); // console.log('Storage key would be:', `pageTitle_${getSafeWinID(windowId)}`);
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -852,41 +856,50 @@ document.addEventListener('DOMContentLoaded', function () {
       let windowId = null;
 
       // Check for any type of task data
-      if (key.startsWith('pageTitle_win_')) {
-        windowId = key.replace('pageTitle_win_', '');
-      } else if (key.startsWith('details_win_')) {
-        windowId = key.replace('details_win_', '');
-      } else if (key.startsWith('dueDate_win_')) {
-        windowId = key.replace('dueDate_win_', '');
-      } else if (key.startsWith('timestamp_pageTitle_win_')) {
-        windowId = key.replace('timestamp_pageTitle_win_', '');
+      if (key.startsWith('pageTitle_')) {
+        windowId = key.replace('pageTitle_', '');
+      } else if (key.startsWith('details_')) {
+        windowId = key.replace('details_', '');
+      } else if (key.startsWith('dueDate_')) {
+        windowId = key.replace('dueDate_', '');
+      } else if (key.startsWith('timestamp_pageTitle_')) {
+        windowId = key.replace('timestamp_pageTitle_', '');
+      } else if (key.startsWith('timestamp_details_')) {
+        windowId = key.replace('timestamp_details_', '');
+      } else if (key.startsWith('timestamp_dueDate_')) {
+        windowId = key.replace('timestamp_dueDate_', '');
       }
 
       // Skip if not a task key or already processed
-      if (!windowId || windowId === currentWindowId || processedWindows.has(windowId)) {
+      // REMOVE the check for currentWindowID to make sure the list will contain the current task: "|| windowId === currentWindowId ||"  
+      if (!windowId || processedWindows.has(windowId)) {
         continue;
       }
 
       processedWindows.add(windowId);
 
       // Get all data for this window
-      const title = localStorage.getItem(`pageTitle_win_${windowId}`) || '';
-      const details = localStorage.getItem(`details_win_${windowId}`) || '';
-      const dueDate = localStorage.getItem(`dueDate_win_${windowId}`) || '';
+      const title = localStorage.getItem(`pageTitle_${getSafeWinID(windowId)}`) || '';
+      // But windowId might already be prefixed from earlier parsing!
+      // Add debug: 
+      // console.log('🔍 loadSessions windowId:', windowId);
+
+      const details = localStorage.getItem(`details_${getSafeWinID(windowId)}`) || '';
+      const dueDate = localStorage.getItem(`dueDate_${getSafeWinID(windowId)}`) || '';
 
       // Include sessions with ANY content
-      if (title || details || (dueDate && dueDate !== '0')) {
-        const timestampKey = `timestamp_pageTitle_win_${windowId}`;
-        const timestamp = localStorage.getItem(timestampKey);
+      //if (title || details || (dueDate && dueDate !== '0')) {   // every session should be displayed in the List whatsoever ( therefore I removed the if Condition completely)  
+      const timestampKey = `timestamp_pageTitle_${getSafeWinID(windowId)}`;
+      const timestamp = localStorage.getItem(timestampKey);
 
-        sessions.push({
-          windowId: windowId,
-          title: title,
-          details: details,
-          dueDate: dueDate,
-          lastUpdated: timestamp ? parseInt(timestamp) : 0,
-        });
-      }
+      sessions.push({
+        windowId: windowId,
+        title: title,
+        details: details,
+        dueDate: dueDate,
+        lastUpdated: timestamp ? parseInt(timestamp) : 0,
+      });
+      // }
     }
 
 
@@ -1033,11 +1046,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Define what data patterns to include in backup
     const keyPatterns = [
-      { pattern: 'pageTitle_win_', property: 'title' },
-      { pattern: 'details_win_', property: 'details' },
-      { pattern: 'timestamp_pageTitle_win_', property: 'titleTimestamp' },
-      { pattern: 'timestamp_details_win_', property: 'detailsTimestamp' },
-      { pattern: 'dueDate_win_', property: 'dueDate' }, // Include due date keys
+      { pattern: 'pageTitle_', property: 'title' },
+      { pattern: 'details_', property: 'details' },
+      { pattern: 'timestamp_pageTitle_', property: 'titleTimestamp' },
+      { pattern: 'timestamp_details_', property: 'detailsTimestamp' },
+      { pattern: 'dueDate_', property: 'dueDate' },
     ];
 
 
@@ -1160,29 +1173,29 @@ document.addEventListener('DOMContentLoaded', function () {
             const tab = backupData.tabs[windowId];
             // Restore all tab data to localStorage
             if (tab.title !== undefined) {
-              localStorage.setItem(`pageTitle_win_${windowId}`, tab.title);
+              localStorage.setItem(`pageTitle_${getSafeWinID(windowId)}`, tab.title);
               loadedCount++;
             }
             if (tab.details !== undefined) {
-              localStorage.setItem(`details_win_${windowId}`, tab.details);
+              localStorage.setItem(`details_${getSafeWinID(windowId)}`, tab.details);
               loadedCount++;
             }
             if (tab.titleTimestamp !== undefined) {
               localStorage.setItem(
-                `timestamp_pageTitle_win_${windowId}`,
+                `timestamp_pageTitle_${getSafeWinID(windowId)}`,
                 tab.titleTimestamp
               );
               loadedCount++;
             }
             if (tab.detailsTimestamp !== undefined) {
               localStorage.setItem(
-                `timestamp_details_win_${windowId}`,
+                `timestamp_details_${getSafeWinID(windowId)}`,
                 tab.detailsTimestamp
               );
               loadedCount++;
             }
             if (tab.dueDate !== undefined) {
-              localStorage.setItem(`dueDate_win_${windowId}`, tab.dueDate);
+              localStorage.setItem(`dueDate_${getSafeWinID(windowId)}`, tab.dueDate);
               loadedCount++;
             }
           }
@@ -1191,10 +1204,10 @@ document.addEventListener('DOMContentLoaded', function () {
           for (const key in backupData) {
             if (
               backupData.hasOwnProperty(key) &&
-              (key.startsWith('pageTitle_win_') ||
-                key.startsWith('details_win_') ||
-                key.startsWith('timestamp_pageTitle_win_') ||
-                key.startsWith('timestamp_details_win_'))
+              (key.startsWith('pageTitle_') ||
+                key.startsWith('details_') ||
+                key.startsWith('timestamp_pageTitle_') ||
+                key.startsWith('timestamp_details_'))
             ) {
               localStorage.setItem(key, backupData[key]);
               loadedCount++;
@@ -1244,8 +1257,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Open a task session in new window
   window.focusSession = function (windowId) {
-    const title = localStorage.getItem(`pageTitle_win_${windowId}`) || '';
-    const details = localStorage.getItem(`details_win_${windowId}`) || '';
+    const title = localStorage.getItem(`pageTitle_${getSafeWinID(windowId)}`) || '';
+    const details = localStorage.getItem(`details_${getSafeWinID(windowId)}`) || '';
 
     // Create URL with task data for new window
     const url = `${window.location.origin}${window.location.pathname
@@ -1269,12 +1282,12 @@ document.addEventListener('DOMContentLoaded', function () {
       )
     ) {
       // Remove all data associated with this session
-      localStorage.removeItem(`pageTitle_win_${windowId}`);
-      localStorage.removeItem(`details_win_${windowId}`);
-      localStorage.removeItem(`timestamp_pageTitle_win_${windowId}`);
-      localStorage.removeItem(`timestamp_details_win_${windowId}`);
-      localStorage.removeItem(`dueDate_win_${windowId}`);
-      localStorage.removeItem(`timestamp_dueDate_win_${windowId}`);
+      localStorage.removeItem(`pageTitle_${getSafeWinID(windowId)}`);
+      localStorage.removeItem(`details_${getSafeWinID(windowId)}`);
+      localStorage.removeItem(`timestamp_pageTitle_${getSafeWinID(windowId)}`);
+      localStorage.removeItem(`timestamp_details_${getSafeWinID(windowId)}`);
+      localStorage.removeItem(`dueDate_${getSafeWinID(windowId)}`);
+      localStorage.removeItem(`timestamp_dueDate_${getSafeWinID(windowId)}`);
 
       loadSessions(); // Refresh the task list
     }
