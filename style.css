@@ -296,6 +296,33 @@ textarea::placeholder {
   color: #333;
 }
 
+
+.sort-buttons {
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+.sort-btn {
+  cursor: pointer;
+  margin: 0 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.sort-btn:hover {
+  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.sort-btn.active {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+
+
 .session-list {
   border: 1px solid #ddd;
   border-radius: 8px;

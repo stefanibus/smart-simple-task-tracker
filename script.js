@@ -47,44 +47,31 @@ const generateWindowId = () => {
   const urlWinId = getSafeWinID(urlParams.get('win'));
 
   // ALWAYS trust the URL for cross-device sync compatibility
-  // If URL already has a window ID, use it and set hash for backward compatibility 
   if (urlWinId) {
-    const titleExists = localStorage.getItem(`pageTitle_${urlWinId}`); // FIXED: use urlWinId directly
-    const detailsExists = localStorage.getItem(`details_${urlWinId}`); // FIXED: use urlWinId directly
+    const titleExists = localStorage.getItem(`pageTitle_${urlWinId}`);
+    const detailsExists = localStorage.getItem(`details_${urlWinId}`);
     const urlTitle = urlParams.get('title');
     const urlDetails = urlParams.get('details');
 
-    // If URL has content but no existing data, INITIALIZE it
+    // If URL has content but no existing data, INITIALIZE with the URL winId
     if ((urlTitle || urlDetails) && !titleExists && !detailsExists) {
-      // console.log('Initializing stale URL with fresh data');
-
       if (urlTitle) {
-        // FIXED: Use urlWinId instead of undefined windowId
-        localStorage.setItem(`pageTitle_${urlWinId}`, urlTitle); // FIXED: use urlTitle from URL
+        localStorage.setItem(`pageTitle_${urlWinId}`, urlTitle);
         localStorage.setItem(`timestamp_pageTitle_${urlWinId}`, Date.now().toString());
       }
       if (urlDetails) {
-        // FIXED: Use urlWinId instead of undefined windowId  
-        localStorage.setItem(`details_${urlWinId}`, urlDetails); // FIXED: use urlDetails from URL
+        localStorage.setItem(`details_${urlWinId}`, urlDetails);
         localStorage.setItem(`timestamp_details_${urlWinId}`, Date.now().toString());
       }
     }
-    return urlWinId; // ADD THIS: Return the URL winId since we're using it
+    return urlWinId;
   }
-  // If hash exists but not in URL params, sync them 
-  if (window.location.hash) {
-    const hashId = getSafeWinID(window.location.hash.substring(1)); // NORMALIZE!
-    const tempURL = new URL(window.location);
-    tempURL.searchParams.set('win', hashId);
-    tempURL.hash = hashId;
-    window.history.replaceState({}, '', tempURL);
-    return hashId;
-  }
+
   // Create new unique ID only if no URL identifier exists
   const newId = 'win_' + Math.random().toString(36).substr(2, 9);
   const tempURL = new URL(window.location);
   tempURL.searchParams.set('win', newId);
-  tempURL.hash = newId;
+  tempURL.hash = '';
   window.history.replaceState({}, '', tempURL);
   return newId;
 };
@@ -391,6 +378,54 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ... the rest of your existing initialization code ...
 
+
+
+  // ===== SORTING FUNCTIONALITY ===== 
+  let currentSort = 'none';
+
+
+  function setSorting(sortType) {
+    currentSort = sortType;
+
+    // Update active state of buttons
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-sort') === sortType);
+    });
+
+    // Reload sessions with new sorting
+    loadSessions();
+  }
+
+  function applySorting(sessions) {
+    switch (currentSort) {
+      case 'updated':
+        sessions.sort((a, b) => b.lastUpdated - a.lastUpdated);
+        break;
+      case 'title':
+        sessions.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case 'none':
+      default:
+        sessions.sort((a, b) => a.storageIndex - b.storageIndex);
+        break;
+    }
+  }
+
+
+
+
+  // Add event listeners for sorting buttons
+  document.addEventListener('click', function (e) {
+    if (e.target.classList.contains('sort-btn')) {
+      const sortType = e.target.getAttribute('data-sort');
+      setSorting(sortType);
+    }
+  });
+
+
+  // END SORTING FUNCTIONALITY =====
+
+
   // ===== PIKADAY DATE PICKER INITIALIZATION =====
   datePicker = new Pikaday({
     field: dueDateInput, // Connect to input field
@@ -425,6 +460,7 @@ document.addEventListener('DOMContentLoaded', function () {
   addClearDateButton();
 
   updateBodyOpacityBasedOnDueDate(); // Add this line
+
 
 
   // Add this event listener for delete buttons (event delegation)  
@@ -478,43 +514,30 @@ document.addEventListener('DOMContentLoaded', function () {
     const newURL = new URL(window.location);
     const currentWinId = winId || windowId;
 
-    // Always include window ID for multi-tab support
+    // Clear all existing parameters and rebuild in desired order
+    newURL.search = '';
+    newURL.hash = '';
+
+    // Always include window ID first for multi-tab support
     newURL.searchParams.set('win', currentWinId);
 
     // Use current values if none provided as parameters
     const currentTitle = title !== undefined ? title : titleTextarea.value;
-    const currentDetails =
-      details !== undefined ? details : detailsTextarea.value;
+    const currentDetails = details !== undefined ? details : detailsTextarea.value;
 
-    // Update title in URL if it exists
+    // Add due date SECOND (from localStorage, not input field)
+    const dueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
+    if (dueDate && dueDate !== '0') {
+      newURL.searchParams.set('dueDate', dueDate);
+    }
+
+    // Then add title and details
     if (currentTitle) {
       newURL.searchParams.set('title', currentTitle);
-    } else {
-      newURL.searchParams.delete('title');
     }
-
-    // Update details in URL if they exist
     if (currentDetails) {
       newURL.searchParams.set('details', currentDetails);
-    } else {
-      newURL.searchParams.delete('details');
     }
-
-    // Add due date to URL from localStorage (not input field)
-    // Handle due date - use "0" for no date
-    const dueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
-
-    // Only include dueDate in URL if it has a valid value
-    // We remove the parameter entirely when empty for cleaner URLs
-    if (dueDate && dueDate !== '0') {
-      //    if (dueDate) {
-      newURL.searchParams.set('dueDate', dueDate);
-    } else {
-      newURL.searchParams.delete('dueDate'); // Clean removal, not empty value
-    }
-
-    // Maintain hash for backward compatibility
-    newURL.hash = currentWinId;
 
     // Update URL without page reload
     window.history.replaceState({}, '', newURL);
@@ -847,7 +870,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Load all task sessions from localStorage for display in task list
   function loadSessions() {
     const sessions = [];
-    const currentWindowId = windowId;
+    // const currentWindowId = windowId;
     const processedWindows = new Set(); // Track windows we've already processed
 
     // Scan through all localStorage items to find ANY task data
@@ -898,11 +921,14 @@ document.addEventListener('DOMContentLoaded', function () {
         details: details,
         dueDate: dueDate,
         lastUpdated: timestamp ? parseInt(timestamp) : 0,
+        storageIndex: i,
       });
       // }
     }
 
 
+    // Apply sorting based on current selection
+    applySorting(sessions); // ← ADD THIS LINE
     // Display the collected sessions
     displaySessions(sessions);
     showSimpleStats();
@@ -934,7 +960,10 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     // Sort sessions by last updated timestamp (newest first)
-    sessions.sort((a, b) => b.lastUpdated - a.lastUpdated);
+    // STEFANO?  sessions.sort((a, b) => b.lastUpdated - a.lastUpdated); 
+    // sort by title
+    // sessions.sort((a, b) => a.title.localeCompare(b.title));
+
 
     let html = '';
 
@@ -1259,14 +1288,26 @@ document.addEventListener('DOMContentLoaded', function () {
   window.focusSession = function (windowId) {
     const title = localStorage.getItem(`pageTitle_${getSafeWinID(windowId)}`) || '';
     const details = localStorage.getItem(`details_${getSafeWinID(windowId)}`) || '';
+    const dueDate = localStorage.getItem(`dueDate_${getSafeWinID(windowId)}`) || '';
 
-    // Create URL with task data for new window
-    const url = `${window.location.origin}${window.location.pathname
-      }?title=${encodeURIComponent(title)}&details=${encodeURIComponent(
-        details
-      )}#${windowId}`;
+    // Create URL with consistent parameter order AND proper encoding
+    const urlParams = new URLSearchParams();
+    urlParams.set('win', windowId);
 
-    window.open(url, '_blank'); // Open in new tab/window
+    if (dueDate && dueDate !== '0') {
+      urlParams.set('dueDate', dueDate);
+    }
+
+    if (title) {
+      urlParams.set('title', title);
+    }
+
+    if (details) {
+      urlParams.set('details', details);
+    }
+
+    const url = `${window.location.origin}${window.location.pathname}?${urlParams.toString()}`;
+    window.open(url, '_blank');
   };
 
   // Delete a task session with confirmation
