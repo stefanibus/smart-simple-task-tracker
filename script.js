@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // CRITICAL: WinID must match current window
     if (urlWinId && urlWinId !== getSafeWinID(windowId)) {
       console.warn(`SSTT: WinID mismatch! URL: ${urlWinId}, Current: ${getSafeWinID(windowId)}`);
-      alert(`⚠️ Sync Warning: Window ID mismatch detected!\n\nThis URL belongs to a different task window. The sync was skipped to prevent data corruption.`);
+      console.warn(`SSTT: WinID mismatch! URL: ${urlWinId}, Current: ${getSafeWinID(windowId)}`);
       return false;
     }
 
@@ -649,68 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== SYNC BANNER AND DIFF MODAL =====
   let syncBannerElement = null;
 
-  function showSyncBanner(data) {
-    // Remove existing banner if present
-    if (syncBannerElement) {
-      syncBannerElement.remove();
-    }
-
-    // Create banner element
-    syncBannerElement = document.createElement('div');
-    syncBannerElement.id = 'syncBanner';
-    syncBannerElement.style.cssText = `
-    position: sticky;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: #fff3cd;
-    border-bottom: 3px solid #ffc107;
-    padding: 12px 16px;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    font-family: inherit;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  `;
-
-    const remoteDate = new Date(data.urlTs).toLocaleString();
-    const remoteShortMid = data.urlMid.substring(0, 12) + '...';
-
-    syncBannerElement.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <span style="font-size: 20px;">🔄</span>
-      <div>
-        <strong>Newer version available</strong><br>
-        <small>From ${remoteShortMid} (${remoteDate})</small>
-      </div>
-    </div>
-    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-      <button id="syncCompareBtn" style="background: #4a6fa5; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">📋 Compare</button>
-      <button id="syncImportBtn" style="background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">📥 Import</button>
-      <button id="syncDismissBtn" style="background: #6c757d; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">✕ Dismiss</button>
-    </div>
-  `;
-
-    // Insert at top of container (after header maybe)
-    const container = document.querySelector('.container');
-    if (container && container.firstChild) {
-      container.insertBefore(syncBannerElement, container.firstChild);
-    } else {
-      document.body.insertBefore(syncBannerElement, document.body.firstChild);
-    }
-
-    // Attach event listeners
-    document.getElementById('syncCompareBtn').onclick = () => showDiffModal(data);
-    document.getElementById('syncImportBtn').onclick = () => confirmImport(data);
-    document.getElementById('syncDismissBtn').onclick = () => {
-      syncBannerElement.remove();
-      syncBannerElement = null;
-    };
-  }
-
+  //  here 
   function showDiffModal(data) {
     // Remove existing modal if present
     const existingModal = document.getElementById('syncDiffModal');
@@ -720,17 +659,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const modal = document.createElement('div');
     modal.id = 'syncDiffModal';
     modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-    `;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;  `;
 
     const localTitle = data.localTitle || '(empty)';
     const localDetails = data.localDetails || '(empty)';
@@ -738,51 +676,68 @@ document.addEventListener('DOMContentLoaded', function () {
     const remoteDetails = data.urlDetails || '(empty)';
     const remoteDate = new Date(data.urlTs).toLocaleString();
 
+    const localDueDate = data.localDueDate || '(none)';
+    const remoteDueDate = data.urlDueDate || '(none)';
+    const dueDateSame = localDueDate === remoteDueDate;
+
     modal.innerHTML = `
-      <div style="background: white; border-radius: 12px; max-width: 95vw; max-height: 90vh; overflow: auto; padding: 20px; width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
-          <h3 style="margin: 0;">📋 Compare Versions</h3>
-          <button id="closeModalBtn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999;">&times;</button>
-        </div>
-        
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-          <!-- Local Version -->
-          <div style="flex: 1; min-width: 250px;">
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-              <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">💻 Current (This Device)</div>
-              <div style="margin-bottom: 12px;">
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
-                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(localTitle)}</div>
-              </div>
-              <div>
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
-                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(localDetails)}</div>
-              </div>
+    <div style="background: white; border-radius: 12px; max-width: 95vw; max-height: 90vh; overflow: auto; padding: 20px; width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
+        <h3 style="margin: 0;">📋 Compare Versions</h3>
+        <button id="closeModalBtn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999;">&times;</button>
+      </div>
+      
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <!-- Local Version -->
+        <div style="flex: 1; min-width: 250px;">
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
+            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">💻 Current (This Device)</div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
+              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(localTitle)}</div>
             </div>
-          </div>
-          
-          <!-- Remote Version -->
-          <div style="flex: 1; min-width: 250px;">
-            <div style="background: #e8f5e8; border-radius: 8px; padding: 12px;">
-              <div style="font-weight: bold; color: #2e7d32; margin-bottom: 8px;">🌐 Other Device (${remoteDate})</div>
-              <div style="margin-bottom: 12px;">
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
-                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(remoteTitle)}</div>
-              </div>
-              <div>
-                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
-                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(remoteDetails)}</div>
-              </div>
+            <div>
+              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
+              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(localDetails)}</div>
             </div>
           </div>
         </div>
         
-        <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">
-          <button id="modalImportBtn" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">📥 Import This Version</button>
-          <button id="modalCloseBtn" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Close</button>
+        <!-- Remote Version -->
+        <div style="flex: 1; min-width: 250px;">
+          <div style="background: #e8f5e8; border-radius: 8px; padding: 12px;">
+            <div style="font-weight: bold; color: #2e7d32; margin-bottom: 8px;">🌐 Other Device (${remoteDate})</div>
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
+              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(remoteTitle)}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
+              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(remoteDetails)}</div>
+            </div>
+          </div>
         </div>
       </div>
-    `;
+      
+      <!-- Due Date Section - NOW INSIDE THE MODAL (before buttons) -->
+      <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">📅 Due Date:</div>
+        <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+          ${dueDateSame ?
+        `<span>${escapeHtml(localDueDate)}</span>` :
+        `<span style="background: #ffe6e6; padding: 2px 4px; border-radius: 3px;">${escapeHtml(localDueDate)}</span>
+             <span style="color: #666;"> → </span>
+             <span style="background: #e6ffe6; padding: 2px 4px; border-radius: 3px;">${escapeHtml(remoteDueDate)}</span>`
+      }
+        </div>
+      </div>
+      
+      <!-- Buttons -->
+      <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="modalImportBtn" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">📥 Import This Version</button>
+        <button id="modalCloseBtn" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+    </div>  `;
 
     document.body.appendChild(modal);
 
