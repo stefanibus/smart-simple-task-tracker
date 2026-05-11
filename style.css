@@ -514,6 +514,35 @@ textarea::placeholder {
   color: #666;
 }
 
+/* Sync Status Indicator */
+.sync-status {
+  font-size: 11px;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  background: #f0f0f0;
+}
+
+#showSyncDetails:hover {
+  background: #dee2e6 !important;
+  transform: translateY(-1px);
+}
+
+.sync-status.synced {
+  background: #d4edda;
+  color: #155724;
+}
+
+.sync-status.warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.sync-status.error {
+  background: #f8d7da;
+  color: #721c24;
+}
 
 /* Add to your CSS */
 .storage-warning {
@@ -686,7 +715,7 @@ textarea::placeholder {
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 20px;
 }
 
 #docsModal {

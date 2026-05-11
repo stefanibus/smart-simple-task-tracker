@@ -4,12 +4,18 @@ function normalizeWinID(winID) {
 
   let cleanWinID = winID.replace(/^win_/, '');
   // ALERT IF WE STILL HAVE DOUBLE win_ PREFIXES
+  // This alert should NEVER fire now with the fixed getSafeWinID
   if (cleanWinID !== winID) {   // console.log(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
     alert(`🚨 DOUBLE win_ DETECTED!\nInput: ${winID}\nOutput: ${cleanWinID}`);
+    console.log('🚨 DOUBLE win_ DETECTED! This should not happen anymore!');
+    console.log('Input:', winID, 'Output:', cleanWinID);
+    console.trace('📍 This indicates a logic error in getSafeWinID');
   }
 
   return cleanWinID;
 }
+// END  ==> WINID NORMALIZATION SYSTEM
+
 function getSafeWinID(winID) {
   if (!winID) return generateNewWinID();
   // If it already has win_ prefix, return as-is (NO NORMALIZATION NEEDED)
@@ -24,21 +30,20 @@ function generateNewWinID() {
   return 'win_' + Math.random().toString(36).substring(2, 12);
 };
 
-function normalizeWinID(winID) {
-  if (!winID || typeof winID !== 'string') return winID;
 
-  let cleanWinID = winID.replace(/^win_/, '');
-
-  // This alert should NEVER fire now with the fixed getSafeWinID
-  if (cleanWinID !== winID) {
-    console.log('🚨 DOUBLE win_ DETECTED! This should not happen anymore!');
-    console.log('Input:', winID, 'Output:', cleanWinID);
-    console.trace('📍 This indicates a logic error in getSafeWinID');
+// ===== MACHINE ID SYSTEM =====
+const MACHINE_ID_KEY = 'sstt_mid';
+const getMachineId = () => {
+  let mid = localStorage.getItem(MACHINE_ID_KEY);
+  if (!mid) {
+    mid = 'mid_' + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem(MACHINE_ID_KEY, mid);
   }
-
-  return cleanWinID;
-}
-// END  ==> WINID NORMALIZATION SYSTEM
+  return mid;
+};
+const myMachineId = getMachineId();
+let isImporting = false; // Prevents sync loops during import
+// ===== END MACHINE ID SYSTEM =====
 
 // Generate a unique ID for this window/tab - URL-FIRST approach
 // This allows multiple task windows to coexist without interfering
@@ -85,6 +90,9 @@ const windowId = generateWindowId();
 const TITLE_STORAGE_KEY = `pageTitle_${getSafeWinID(windowId)}`;
 const DETAILS_STORAGE_KEY = `details_${getSafeWinID(windowId)}`;
 const DUE_DATE_STORAGE_KEY = `dueDate_${getSafeWinID(windowId)}`;
+const SYNC_TS_STORAGE_KEY = `sync_ts_${getSafeWinID(windowId)}`;
+const LAST_SYNC_TIMESTAMP_KEY = `last_sync_ts_${getSafeWinID(windowId)}`;
+const LAST_SYNC_MACHINE_KEY = `last_sync_mid_${getSafeWinID(windowId)}`;
 
 const STORAGE_WARNING_THRESHOLD = 85; // to test Storage Warning function set to 0.1   
 const STORAGE_CHECK_INTERVAL = 300000; // 5 minutes in milliseconds
@@ -511,26 +519,34 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== URL MANAGEMENT =====
   // Function to update browser URL with current state
   function updateURL(title, details, winId = null) {
+    // Skip URL updates during import to prevent sync loops
+    if (isImporting) return;
+
     const newURL = new URL(window.location);
     const currentWinId = winId || windowId;
+    const syncTimestamp = Date.now();
+
+    // Save timestamp to localStorage for cross-device comparison
+    localStorage.setItem(SYNC_TS_STORAGE_KEY, syncTimestamp.toString());
 
     // Clear all existing parameters and rebuild in desired order
     newURL.search = '';
     newURL.hash = '';
 
-    // Always include window ID first for multi-tab support
+    // Add machine ID and sync timestamp FIRST (critical for sync)
+    newURL.searchParams.set('mid', myMachineId);
+    newURL.searchParams.set('ts', syncTimestamp.toString());
     newURL.searchParams.set('win', currentWinId);
 
     // Use current values if none provided as parameters
     const currentTitle = title !== undefined ? title : titleTextarea.value;
     const currentDetails = details !== undefined ? details : detailsTextarea.value;
-
     // Add due date SECOND (from localStorage, not input field)
     const dueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
+
     if (dueDate && dueDate !== '0') {
       newURL.searchParams.set('dueDate', dueDate);
     }
-
     // Then add title and details
     if (currentTitle) {
       newURL.searchParams.set('title', currentTitle);
@@ -541,43 +557,161 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Update URL without page reload
     window.history.replaceState({}, '', newURL);
-
     // Trigger sync for browser extensions etc.
     window.dispatchEvent(new Event('popstate'));
   }
 
+  // ===== CROSS-DEVICE SYNC REFEREE =====
+  function syncFromUrlIfNewer() {
+    // Skip if already importing to prevent loops
+    if (isImporting) return false;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlWinId = urlParams.get('win');
+    const urlMid = urlParams.get('mid');
+    const urlTs = parseInt(urlParams.get('ts')) || 0;
+    const urlTitle = urlParams.get('title');
+    const urlDetails = urlParams.get('details');
+    const urlDueDate = urlParams.get('dueDate');
 
+    // CRITICAL: WinID must match current window
+    if (urlWinId && urlWinId !== getSafeWinID(windowId)) {
+      console.warn(`SSTT: WinID mismatch! URL: ${urlWinId}, Current: ${getSafeWinID(windowId)}`);
+      alert(`⚠️ Sync Warning: Window ID mismatch detected!\n\nThis URL belongs to a different task window. The sync was skipped to prevent data corruption.`);
+      return false;
+    }
 
+    // If URL has NO win parameter, this is a fresh page - no sync needed
+    if (!urlWinId) {
+      console.log("SSTT: Fresh page with no URL parameters - skipping sync");
+      return false;
+    }
 
+    // Only proceed if URL has a different machine ID
+    if (!urlMid || urlMid === myMachineId) return false;
+
+    // Get local sync timestamp for this task
+    const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
+
+    // URL data is newer from another machine → IMPORT
+    if (urlTs > localSyncTs) {
+      isImporting = true;
+      console.log(`SSTT: Importing newer data from ${urlMid} (URL TS: ${urlTs} > Local TS: ${localSyncTs})`);
+
+      // === NEW: Record last sync info BEFORE importing ===
+      localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, urlTs.toString());
+      localStorage.setItem(LAST_SYNC_MACHINE_KEY, urlMid);
+
+      // === IMPORT DATA TO LOCALSTORAGE ===
+      if (urlTitle) {
+        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
+        localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
+
+        // Update UI
+        titleTextarea.value = urlTitle;
+        updateTitle();
+        updateCounter();
+      }
+
+      if (urlDetails) {
+        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
+        localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
+
+        // Update UI
+        detailsTextarea.value = urlDetails;
+        updateDetailsCounter();
+        autoExpand(detailsTextarea);
+      }
+
+      if (urlDueDate && urlDueDate !== '0') {
+        localStorage.setItem(DUE_DATE_STORAGE_KEY, urlDueDate);
+
+        // Update UI
+        dueDateInput.value = urlDueDate;
+        const [year, month, day] = urlDueDate.split('-').map(Number);
+        const dueDateForPicker = new Date(year, month - 1, day);
+        datePicker.setDate(dueDateForPicker);
+        updateDaysIndicator(dueDateForPicker);
+      }
+
+      // Update sync timestamp AFTER import
+      localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
+
+      // Refresh the task list
+      loadSessions();
+
+      // Release import lock after UI updates are complete
+      setTimeout(() => {
+        isImporting = false;
+        console.log("SSTT: Import completed, lock released");
+      }, 500);
+
+      return true;
+    }
+    // URL data is older than local → Warning
+    else if (urlTs < localSyncTs && urlTs !== 0) {
+      console.warn(`SSTT: URL data is older (${urlTs} < ${localSyncTs}) - keeping local`);
+      alert(`ℹ️ Sync Info: This URL contains older data (from ${new Date(urlTs).toLocaleString()})\n\nYour local data (from ${new Date(localSyncTs).toLocaleString()}) is newer and was kept.`);
+    }
+
+    return false;
+  }
+  // ===== END SYNC REFEREE =====
 
 
 
   // ===== INITIAL DATA LOADING =====
-  // Check URL parameters first (for sharing/shallow linking)
+  // FIRST: Check for cross-device sync (this may populate localStorage)
+  const wasImported = syncFromUrlIfNewer();
+
+  // Get URL parameters for validation only
   const urlParams = new URLSearchParams(window.location.search);
-  let urlTitle = urlParams.get('title');
-  let urlDetails = urlParams.get('details');
-  let urlDueDate = urlParams.get('dueDate');
+  const urlMid = urlParams.get('mid');
+  const urlWinId = urlParams.get('win');
+
+  // CRITICAL: Only use URL parameters for initial data if:
+  // 1. We just imported from another machine (wasImported = true)
+  // 2. OR this is a brand new window with no localStorage data AND no machine ID in URL
+  const urlTs = parseInt(urlParams.get('ts')) || 0;
+  const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
+
+  const shouldUseUrlParams = wasImported ||
+    (!localStorage.getItem(TITLE_STORAGE_KEY) &&
+      !localStorage.getItem(DETAILS_STORAGE_KEY) &&
+      !urlMid) ||
+    (urlTs > localSyncTs && urlMid === myMachineId);  // Same machine but URL has newer timestamp (edge case);
+
+  let urlTitle = null;
+  let urlDetails = null;
+  let urlDueDate = null;
+
+  if (shouldUseUrlParams) {
+    urlTitle = urlParams.get('title');
+    urlDetails = urlParams.get('details');
+    urlDueDate = urlParams.get('dueDate');
+    console.log("SSTT: Using URL parameters for initial data load");
+  } else {
+    console.log("SSTT: Using only localStorage (URL parameters ignored for same-machine)");
+  }
 
   // Fall back to localStorage if no URL params
   const storedTitle = localStorage.getItem(TITLE_STORAGE_KEY);
   const storedDetails = localStorage.getItem(DETAILS_STORAGE_KEY);
   const storedDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
 
-  // Priority: URL params > localStorage > empty
-  const initialTitle = urlTitle || storedTitle || '';
-  const initialDetails = urlDetails || storedDetails || '';
-  const initialDueDate = urlDueDate || storedDueDate || '';
+  // Priority: URL params (only if shouldUseUrlParams is true) > localStorage > empty
+  const initialTitle = (urlTitle || storedTitle || '');
+  const initialDetails = (urlDetails || storedDetails || '');
+  const initialDueDate = (urlDueDate || storedDueDate || '');
 
   // Load initial title data
   if (initialTitle) {
     titleTextarea.value = initialTitle;
-    updateTitle(); // Update heading
-    updateCounter(); // Update character counter
+    updateTitle();
+    updateCounter();
 
-    // If URL provided title different from stored, update storage
-    if (urlTitle && urlTitle !== storedTitle) {
+    // Only update storage if we actually used URL params
+    if (shouldUseUrlParams && urlTitle && urlTitle !== storedTitle) {
       localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
     }
   }
@@ -585,10 +719,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // Load initial details data
   if (initialDetails) {
     detailsTextarea.value = initialDetails;
-    updateDetailsCounter(); // Update character counter
-    autoExpand(detailsTextarea); // Expand to fit content
+    updateDetailsCounter();
+    autoExpand(detailsTextarea);
 
-    if (urlDetails && urlDetails !== storedDetails) {
+    if (shouldUseUrlParams && urlDetails && urlDetails !== storedDetails) {
       localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
     }
   }
@@ -603,11 +737,14 @@ document.addEventListener('DOMContentLoaded', function () {
     datePicker.setDate(dueDateForPicker);
     updateDaysIndicator(dueDateForPicker);
 
-    saveDueDate(initialDueDate); // Ensure proper storage
+    if (shouldUseUrlParams && urlDueDate && urlDueDate !== storedDueDate) {
+      saveDueDate(initialDueDate);
+    }
   }
 
-  // Finalize URL with loaded data
+  // Finalize URL with loaded data (this will overwrite any manually changed URL params)
   updateURL(initialTitle, initialDetails);
+
 
   // Check if we're on Stackedit or on out Live-Page 
   const isOnProduction = window.location.hostname.includes('stefanibus.github.io')
@@ -621,6 +758,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // Title textarea input listener with debouncing
   titleTextarea.addEventListener('input', function () {
     // console.log('Title input detected:', this.value); // console.log('WindowId:', windowId); // console.log('Storage key would be:', `pageTitle_${getSafeWinID(windowId)}`);
+
+    if (isImporting) return;
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -650,6 +789,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Details textarea input listener (same pattern as title)
   detailsTextarea.addEventListener('input', function () {
+
+    if (isImporting) return;
     autoExpand(this);
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -715,6 +856,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function saveDueDate(dateString) {
+    if (isImporting) return;
     // Simple storage function for due dates
     if (dateString) {
       localStorage.setItem(DUE_DATE_STORAGE_KEY, dateString);
@@ -774,13 +916,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }, TIMEOUTS.BACKGROUND_REFRESH);
 
   // Initial load of sessions
-  loadSessions();
+  loadSessions(); // stefano search for String "perhapsDuplcate" 
 
   // Manual refresh button
   manualRefreshBtn.addEventListener('click', function () {
     loadSessions();
     lastRefreshTime = Date.now();
     updateRefreshStatus();
+    updateSyncStatusDisplay();
   });
 
   // Refresh when page visibility changes
@@ -790,6 +933,7 @@ document.addEventListener('DOMContentLoaded', function () {
       loadSessions();
       lastRefreshTime = Date.now();
       updateRefreshStatus();
+      updateSyncStatusDisplay();
     } else if (document.visibilityState === 'hidden') {
       // Tab became hidden: Save current state
       clearTimeout(debounceTimer);
@@ -802,6 +946,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loadSessions();
     lastRefreshTime = Date.now();
     updateRefreshStatus();
+    updateSyncStatusDisplay();
+  });
+
+  // Clear import lock when window loses focus or unloads
+  window.addEventListener('beforeunload', function () {
+    isImporting = false;
+  });
+
+  window.addEventListener('blur', function () {
+    isImporting = false;
   });
 
   // ===== CORE APPLICATION FUNCTIONS =====
@@ -959,11 +1113,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-    // Sort sessions by last updated timestamp (newest first)
-    // STEFANO?  sessions.sort((a, b) => b.lastUpdated - a.lastUpdated); 
-    // sort by title
-    // sessions.sort((a, b) => a.title.localeCompare(b.title));
-
 
     let html = '';
 
@@ -1036,6 +1185,53 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update the session list UI
     sessionList.innerHTML = html;
   }
+
+
+  // ===== SYNC STATUS DISPLAY =====
+  function updateSyncStatusDisplay() {
+    const syncStatusElement = document.getElementById('syncStatusIndicator');
+    if (!syncStatusElement) {
+      console.log("SSTT: syncStatusIndicator element not found in DOM");
+      return;
+    }
+
+    const lastSyncTs = localStorage.getItem(LAST_SYNC_TIMESTAMP_KEY);
+    const lastSyncMid = localStorage.getItem(LAST_SYNC_MACHINE_KEY);
+
+    if (!lastSyncTs || !lastSyncMid) {
+      syncStatusElement.textContent = '📡 No cross-device sync yet';
+      syncStatusElement.className = 'sync-status';
+      return;
+    }
+
+    const syncDate = new Date(parseInt(lastSyncTs));
+    const now = Date.now();
+    const hoursSinceSync = (now - parseInt(lastSyncTs)) / (1000 * 60 * 60);
+
+    let statusClass = 'sync-status';
+    let statusIcon = '✅';
+
+    if (hoursSinceSync > 168) { // 7 days
+      statusClass += ' error';
+      statusIcon = '❌';
+    } else if (hoursSinceSync > 24) {
+      statusClass += ' warning';
+      statusIcon = '⚠️';
+    } else {
+      statusClass += ' synced';
+      statusIcon = '✅';
+    }
+
+    const formattedDate = syncDate.toLocaleString();
+    const shortMid = lastSyncMid.substring(0, 12) + '...';
+
+    syncStatusElement.innerHTML = `${statusIcon} Last sync: ${formattedDate} from ${shortMid}`;
+    syncStatusElement.className = statusClass;
+
+    // Add tooltip with full details
+    syncStatusElement.title = `Full Machine ID: ${lastSyncMid}\nTimestamp: ${syncDate.toISOString()}\nAge: ${Math.round(hoursSinceSync)} hours ago`;
+  }
+  // ===== END SYNC STATUS DISPLAY =====
 
 
   // Add this function to update body class based on due date status
@@ -1397,7 +1593,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  // Initial load of sessions
+  loadSessions(); // stefano search for String "perhapsDuplcate"
 
+  // Update sync status display
+  updateSyncStatusDisplay();
 
 
   // checkStorageRegularly 
@@ -1407,7 +1607,106 @@ document.addEventListener('DOMContentLoaded', function () {
   // This must be after all DOM elements are fully loaded
   updateLastBackupDisplay();
 
-});
+  // checkStorageRegularly 
+  checkStorageRegularly();
+
+  // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
+  updateLastBackupDisplay();
+
+  // Optional: Clear sync history for this task
+  function clearSyncHistory() {
+    localStorage.removeItem(LAST_SYNC_TIMESTAMP_KEY);
+    localStorage.removeItem(LAST_SYNC_MACHINE_KEY);
+    updateSyncStatusDisplay();
+    console.log("SSTT: Sync history cleared");
+  }
+
+  // ===== MODAL SYNC DETAILS TOGGLE =====
+
+  function updateModalSyncStatus() {
+    const syncStatusElement = document.getElementById('modalSyncStatus');
+    const detailsElement = document.getElementById('syncDetails');
+
+    if (!syncStatusElement) return;
+
+    const lastSync = localStorage.getItem(LAST_SYNC_TIMESTAMP_KEY);
+    const machineId = localStorage.getItem(MACHINE_ID_KEY);
+
+    if (!lastSync) {
+      syncStatusElement.innerHTML = '<span style="color: #6c757d;">📡 No cross-device sync yet</span>';
+    } else {
+      const syncDate = new Date(parseInt(lastSync));
+      const daysSinceSync = (Date.now() - parseInt(lastSync)) / (1000 * 60 * 60 * 24);
+      let statusColor = '#28a745'; // green
+      if (daysSinceSync > 7) statusColor = '#dc3545'; // red
+      else if (daysSinceSync > 1) statusColor = '#ffc107'; // yellow
+
+      syncStatusElement.innerHTML = `<span style="color: ${statusColor}; font-weight: 500;">${syncDate.toLocaleString()} (${Math.round(daysSinceSync)} days ago)</span>`;
+    }
+
+    if (detailsElement && machineId) {
+      const lastSync = localStorage.getItem(LAST_SYNC_TIMESTAMP_KEY);
+      detailsElement.innerHTML = `
+        <div style="display: grid; gap: 8px;">
+          <div><strong>🔧 Device ID:</strong> <code style="background: #f1f3f4; padding: 2px 6px; border-radius: 4px;">${machineId.substring(0, 12)}...</code></div>
+          <div><strong>📋 Sync Rules:</strong></div>
+          <ul style="margin: 0 0 0 20px; padding: 0;">
+            <li>✓ Different device + newer timestamp → <strong style="color: #28a745;">Auto-import</strong></li>
+            <li>✗ Different device + older timestamp → <strong style="color: #ffc107;">Warning, keep local</strong></li>
+            <li>= Same device → <strong style="color: #6c757d;">URL ignored (localStorage is source of truth)</strong></li>
+          </ul>
+          <div><strong>🔄 Last sync:</strong> ${lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'Never'}</div>
+          <div><strong>⚠️ Troubleshooting:</strong></div>
+          <ul style="margin: 0 0 0 20px; padding: 0;">
+            <li>"WinID mismatch" → URL belongs to different task window</li>
+            <li>"Older data" warning → Other device has newer unsynced changes</li>
+            <li>No sync indicator → Perform first cross-device sync</li>
+          </ul>
+          <div style="font-size: 10px; color: #6c757d; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9ecef;">
+            SSTT v1.3 | <a href="https://github.com/stefanibus/smart-simple-task-tracker" target="_blank" style="color: #4a6fa5;">GitHub Repository</a>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Toggle button text when clicked
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('#showSyncDetails');
+    if (btn) {
+      const details = document.getElementById('syncDetails');
+      if (details) {
+        const isHidden = details.style.display === 'none';
+        details.style.display = isHidden ? 'block' : 'none';
+        btn.textContent = isHidden ? '🔧 Hide technical details' : '📋 Show technical details';
+      }
+    }
+  });
+
+
+
+  // Update modal status when sessions load (override without breaking)
+  const originalLoadSessions = loadSessions;
+  loadSessions = function () {
+    originalLoadSessions();
+    updateModalSyncStatus();
+  };
+
+  // Initial update
+  updateModalSyncStatus();
+  // ===== END MODAL SYNC DETAILS TOGGLE =====
+
+}); // ← DOMContentLoaded ends here
+
+
+
+// Optional: Clear sync history for this task
+function clearSyncHistory() {
+  localStorage.removeItem(LAST_SYNC_TIMESTAMP_KEY);
+  localStorage.removeItem(LAST_SYNC_MACHINE_KEY);
+  updateSyncStatusDisplay();
+  console.log("SSTT: Sync history cleared");
+}
 
 // ===== MODAL FUNCTIONALITY START =====
 const docsToggle = document.getElementById('docsToggle');
@@ -1432,4 +1731,3 @@ if (docsToggle && docsModal) {
   });
 }
 // ===== MODAL FUNCTIONALITY END =====
-
