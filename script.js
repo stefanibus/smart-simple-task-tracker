@@ -18,14 +18,18 @@ function normalizeWinID(winID) {
 
 function getSafeWinID(winID) {
   if (!winID) return generateNewWinID();
-  // If it already has win_ prefix, return as-is (NO NORMALIZATION NEEDED)
-  if (winID.startsWith('win_')) {
-    return winID;
+
+  // Remove ALL 'win_' prefixes (handle win_win_xxx → win_xxx)
+  let cleanID = winID;
+  while (cleanID.startsWith('win_')) {
+    cleanID = cleanID.substring(4); // Remove 'win_' (4 characters)
   }
 
-  // Otherwise, add the prefix
-  return `win_${winID}`;
+  // Add exactly ONE 'win_' prefix
+  return `win_${cleanID}`;
 }
+
+
 function generateNewWinID() {
   return 'win_' + Math.random().toString(36).substring(2, 12);
 };
@@ -49,7 +53,10 @@ let isImporting = false; // Prevents sync loops during import
 // This allows multiple task windows to coexist without interfering
 const generateWindowId = () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const urlWinId = getSafeWinID(urlParams.get('win'));
+  let rawWinId = urlParams.get('win');
+  // Use the aggressive cleaner
+  const urlWinId = getSafeWinID(rawWinId);
+  //  const urlWinId = getSafeWinID(urlParams.get('win'));
 
   // ALWAYS trust the URL for cross-device sync compatibility
   if (urlWinId) {
