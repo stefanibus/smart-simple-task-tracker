@@ -562,20 +562,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ===== CROSS-DEVICE SYNC REFEREE =====
+  // ===== CROSS-DEVICE SYNC REFEREE =====
   function syncFromUrlIfNewer() {
     // Skip if already importing to prevent loops
     if (isImporting) return false;
-
-    // === NEW: Validate local MID exists (recovery only, no overwrite) ===
-    let localMid = localStorage.getItem(MACHINE_ID_KEY);
-    if (!localMid) {
-      // This shouldn't happen, but recover if it does
-      console.warn("SSTT: MID missing! Recovering...");
-      localMid = 'mid_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem(MACHINE_ID_KEY, localMid);
-    }
-    // IMPORTANT: Do NOT "fix" mismatched MIDs here - that would break cross-device sync!
-    // Different MIDs on different devices is CORRECT behavior.
 
     const urlParams = new URLSearchParams(window.location.search);
     const urlWinId = urlParams.get('win');
@@ -601,166 +591,427 @@ document.addEventListener('DOMContentLoaded', function () {
     // Only proceed if URL has a different machine ID
     if (!urlMid || urlMid === myMachineId) return false;
 
-    // Get local sync timestamp for this task
+    // Get local data for comparison
+    const localTitle = localStorage.getItem(TITLE_STORAGE_KEY) || '';
+    const localDetails = localStorage.getItem(DETAILS_STORAGE_KEY) || '';
+    const localDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY) || '';
     const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
 
-    // URL data is newer from another machine → IMPORT
-    if (urlTs > localSyncTs) {
-      isImporting = true;
+    // Check if content is actually different
+    const contentSame = (urlTitle === localTitle) && (urlDetails === localDetails) && (urlDueDate === localDueDate);
 
-      console.log(`🔄 SSTT: Importing cross-device data - URL parameters from ${urlMid} (${new Date(urlTs).toLocaleString()}) are newer than local (${new Date(localSyncTs).toLocaleString()})`);
-      console.log(`SSTT: Importing newer data from ${urlMid} (URL TS: ${urlTs} > Local TS: ${localSyncTs})`);
-
-      // === NEW: Record last sync info BEFORE importing ===
-      localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, urlTs.toString());
-      localStorage.setItem(LAST_SYNC_MACHINE_KEY, urlMid);
-      // === CRITICAL: Do NOT overwrite local MID! ===
-      // The MID is per-device and should never be imported from URL
-      // (Nothing to add here - just confirming we NEVER touch MACHINE_ID_KEY during import)
-
-
-      // === IMPORT DATA TO LOCALSTORAGE ===
-      if (urlTitle) {
-        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
-        localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
-
-        // Update UI
-        titleTextarea.value = urlTitle;
-        updateTitle();
-        updateCounter();
-      }
-
-      if (urlDetails) {
-        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
-        localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
-
-        // Update UI
-        detailsTextarea.value = urlDetails;
-        updateDetailsCounter();
-        autoExpand(detailsTextarea);
-      }
-
-      if (urlDueDate && urlDueDate !== '0') {
-        localStorage.setItem(DUE_DATE_STORAGE_KEY, urlDueDate);
-
-        // Update UI
-        dueDateInput.value = urlDueDate;
-        const [year, month, day] = urlDueDate.split('-').map(Number);
-        const dueDateForPicker = new Date(year, month - 1, day);
-        datePicker.setDate(dueDateForPicker);
-        updateDaysIndicator(dueDateForPicker);
-      }
-
-      // Update sync timestamp AFTER import
-      localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
-
-      // Refresh the task list
-      loadSessions();
-
-      // Release import lock after UI updates are complete
-      setTimeout(() => {
-        isImporting = false;
-        console.log("SSTT: Import completed, lock released");
-      }, 500);
-
-      return true;
-    }
-    // URL data is older than local → Warning
-    else if (urlTs < localSyncTs && urlTs !== 0) {
-      console.warn(`⚠️ SSTT: URL data is older (${new Date(urlTs).toLocaleString()}) - keeping local data (${new Date(localSyncTs).toLocaleString()})`);
-      // console.warn(`SSTT: URL data is older (${urlTs} < ${localSyncTs}) - keeping local`);
-      alert(`ℹ️ Sync Info: This URL contains older data (from ${new Date(urlTs).toLocaleString()})\n\nYour local data (from ${new Date(localSyncTs).toLocaleString()}) is newer and was kept.`);
+    if (contentSame) {
+      console.log("SSTT: URL and local content are identical - no sync needed");
+      return false;
     }
 
-    return false;
+    // Show sync notification banner (never auto-import)
+    showSyncBanner({
+      urlMid: urlMid,
+      urlTs: urlTs,
+      urlTitle: urlTitle,
+      urlDetails: urlDetails,
+      urlDueDate: urlDueDate,
+      localTitle: localTitle,
+      localDetails: localDetails,
+      localDueDate: localDueDate,
+      localSyncTs: localSyncTs
+    });
+
+    return false; // Never auto-import
   }
   // ===== END SYNC REFEREE =====
 
 
 
-  // ===== INITIAL DATA LOADING =====
-  // FIRST: Check for cross-device sync (this may populate localStorage)
-  const wasImported = syncFromUrlIfNewer();
 
-  // Get URL parameters for validation only
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlMid = urlParams.get('mid');
-  const urlWinId = urlParams.get('win');
+  // ===== SYNC BANNER AND DIFF MODAL =====
+  let syncBannerElement = null;
 
-  // CRITICAL: Only use URL parameters for initial data if:
-  // 1. We just imported from another machine (wasImported = true)
-  // 2. OR this is a brand new window with no localStorage data AND no machine ID in URL
-  const urlTs = parseInt(urlParams.get('ts')) || 0;
-  const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
+  function showSyncBanner(data) {
+    // Remove existing banner if present
+    if (syncBannerElement) {
+      syncBannerElement.remove();
+    }
 
-  const shouldUseUrlParams = wasImported ||
-    (!localStorage.getItem(TITLE_STORAGE_KEY) &&
-      !localStorage.getItem(DETAILS_STORAGE_KEY) &&
-      !urlMid) ||
-    (urlTs > localSyncTs && urlMid === myMachineId);  // Same machine but URL has newer timestamp (edge case);
+    // Create banner element
+    syncBannerElement = document.createElement('div');
+    syncBannerElement.id = 'syncBanner';
+    syncBannerElement.style.cssText = `
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff3cd;
+    border-bottom: 3px solid #ffc107;
+    padding: 12px 16px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: inherit;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  `;
 
-  let urlTitle = null;
-  let urlDetails = null;
-  let urlDueDate = null;
+    const remoteDate = new Date(data.urlTs).toLocaleString();
+    const remoteShortMid = data.urlMid.substring(0, 12) + '...';
 
-  if (shouldUseUrlParams) {
-    urlTitle = urlParams.get('title');
-    urlDetails = urlParams.get('details');
-    urlDueDate = urlParams.get('dueDate');
-    console.log("SSTT: Using URL parameters for initial data load");
+    syncBannerElement.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 20px;">🔄</span>
+      <div>
+        <strong>Newer version available</strong><br>
+        <small>From ${remoteShortMid} (${remoteDate})</small>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button id="syncCompareBtn" style="background: #4a6fa5; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">📋 Compare</button>
+      <button id="syncImportBtn" style="background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">📥 Import</button>
+      <button id="syncDismissBtn" style="background: #6c757d; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">✕ Dismiss</button>
+    </div>
+  `;
+
+    // Insert at top of container (after header maybe)
+    const container = document.querySelector('.container');
+    if (container && container.firstChild) {
+      container.insertBefore(syncBannerElement, container.firstChild);
+    } else {
+      document.body.insertBefore(syncBannerElement, document.body.firstChild);
+    }
+
+    // Attach event listeners
+    document.getElementById('syncCompareBtn').onclick = () => showDiffModal(data);
+    document.getElementById('syncImportBtn').onclick = () => confirmImport(data);
+    document.getElementById('syncDismissBtn').onclick = () => {
+      syncBannerElement.remove();
+      syncBannerElement = null;
+    };
   }
 
-  // Fall back to localStorage if no URL params
+  function showDiffModal(data) {
+    // Remove existing modal if present
+    const existingModal = document.getElementById('syncDiffModal');
+    if (existingModal) existingModal.remove();
+
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.id = 'syncDiffModal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    `;
+
+    const localTitle = data.localTitle || '(empty)';
+    const localDetails = data.localDetails || '(empty)';
+    const remoteTitle = data.urlTitle || '(empty)';
+    const remoteDetails = data.urlDetails || '(empty)';
+    const remoteDate = new Date(data.urlTs).toLocaleString();
+
+    modal.innerHTML = `
+      <div style="background: white; border-radius: 12px; max-width: 95vw; max-height: 90vh; overflow: auto; padding: 20px; width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
+          <h3 style="margin: 0;">📋 Compare Versions</h3>
+          <button id="closeModalBtn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999;">&times;</button>
+        </div>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <!-- Local Version -->
+          <div style="flex: 1; min-width: 250px;">
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
+              <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">💻 Current (This Device)</div>
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
+                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(localTitle)}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
+                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(localDetails)}</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Remote Version -->
+          <div style="flex: 1; min-width: 250px;">
+            <div style="background: #e8f5e8; border-radius: 8px; padding: 12px;">
+              <div style="font-weight: bold; color: #2e7d32; margin-bottom: 8px;">🌐 Other Device (${remoteDate})</div>
+              <div style="margin-bottom: 12px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
+                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(remoteTitle)}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
+                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(remoteDetails)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="modalImportBtn" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">📥 Import This Version</button>
+          <button id="modalCloseBtn" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Close</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close modal handlers
+    const closeModal = () => modal.remove();
+    document.getElementById('closeModalBtn').onclick = closeModal;
+    document.getElementById('modalCloseBtn').onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    // Import from modal
+    document.getElementById('modalImportBtn').onclick = () => {
+      closeModal();
+      confirmImport(data);
+    };
+  }
+
+
+  function confirmImport(data) {
+    const remoteDate = new Date(data.urlTs).toLocaleString();
+    const remoteShortMid = data.urlMid.substring(0, 12) + '...';
+
+    const userConfirmed = confirm(
+      `Import data from other device?\n\n` +
+      `From: ${remoteShortMid}\n` +
+      `Date: ${remoteDate}\n\n` +
+      `Current data will be backed up in case you want to undo.\n\n` +
+      `Click OK to import, Cancel to keep current.`
+    );
+
+    if (userConfirmed) {
+      performSync(data);
+    }
+  }
+
+  function performSync(data) {
+    isImporting = true;
+
+    // Backup current state before import
+    const backupKey = `${TITLE_STORAGE_KEY}_backup`;
+    localStorage.setItem(backupKey, JSON.stringify({
+      title: localStorage.getItem(TITLE_STORAGE_KEY) || '',
+      details: localStorage.getItem(DETAILS_STORAGE_KEY) || '',
+      dueDate: localStorage.getItem(DUE_DATE_STORAGE_KEY) || '',
+      timestamp: Date.now()
+    }));
+
+    // Import URL data to localStorage
+    if (data.urlTitle !== undefined && data.urlTitle !== null) {
+      localStorage.setItem(TITLE_STORAGE_KEY, data.urlTitle);
+      localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
+      titleTextarea.value = data.urlTitle;
+    }
+
+    if (data.urlDetails !== undefined && data.urlDetails !== null) {
+      localStorage.setItem(DETAILS_STORAGE_KEY, data.urlDetails);
+      localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
+      detailsTextarea.value = data.urlDetails;
+      autoExpand(detailsTextarea);
+    }
+
+    if (data.urlDueDate && data.urlDueDate !== '0') {
+      localStorage.setItem(DUE_DATE_STORAGE_KEY, data.urlDueDate);
+      dueDateInput.value = data.urlDueDate;
+      const [year, month, day] = data.urlDueDate.split('-').map(Number);
+      const dueDateForPicker = new Date(year, month - 1, day);
+      datePicker.setDate(dueDateForPicker);
+      updateDaysIndicator(dueDateForPicker);
+    }
+
+    // Update sync timestamp
+    localStorage.setItem(SYNC_TS_STORAGE_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_MACHINE_KEY, data.urlMid);
+
+    // Update UI
+    updateTitle();
+    updateCounter();
+    updateDetailsCounter();
+    loadSessions();
+    updateSyncStatusDisplay();
+
+    // Show undo option for 10 seconds
+    showUndoNotification();
+
+    // Remove banner if present
+    if (syncBannerElement) {
+      syncBannerElement.remove();
+      syncBannerElement = null;
+    }
+
+    isImporting = false;
+    console.log("SSTT: Sync import completed");
+  }
+
+  function showUndoNotification() {
+    const undoBanner = document.createElement('div');
+    undoBanner.id = 'undoBanner';
+    undoBanner.style.cssText = `
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #d4edda;
+      border-bottom: 3px solid #28a745;
+      padding: 10px 16px;
+      z-index: 1001;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: inherit;
+    `;
+
+    undoBanner.innerHTML = `
+      <span>✅ Sync completed! Data imported from other device.</span>
+      <button id="undoSyncBtn" style="background: #ffc107; color: #333; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">↩️ Undo</button>
+    `;
+
+    const container = document.querySelector('.container');
+    if (container && container.firstChild) {
+      container.insertBefore(undoBanner, container.firstChild);
+    }
+
+    document.getElementById('undoSyncBtn').onclick = () => {
+      undoLastSync();
+      undoBanner.remove();
+    };
+
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+      if (undoBanner.parentNode) undoBanner.remove();
+    }, 10000);
+  }
+
+  function undoLastSync() {
+    const backupKey = `${TITLE_STORAGE_KEY}_backup`;
+    const backupStr = localStorage.getItem(backupKey);
+
+    if (!backupStr) {
+      alert("No backup found to undo.");
+      return;
+    }
+
+    const backup = JSON.parse(backupStr);
+
+    // Restore from backup
+    localStorage.setItem(TITLE_STORAGE_KEY, backup.title);
+    localStorage.setItem(DETAILS_STORAGE_KEY, backup.details);
+    localStorage.setItem(DUE_DATE_STORAGE_KEY, backup.dueDate);
+    localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, backup.timestamp.toString());
+    localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, backup.timestamp.toString());
+
+    // Update UI
+    titleTextarea.value = backup.title;
+    detailsTextarea.value = backup.details;
+    dueDateInput.value = backup.dueDate;
+
+    if (backup.dueDate && backup.dueDate !== '0') {
+      const [year, month, day] = backup.dueDate.split('-').map(Number);
+      const dueDateForPicker = new Date(year, month - 1, day);
+      datePicker.setDate(dueDateForPicker);
+      updateDaysIndicator(dueDateForPicker);
+    } else {
+      datePicker.setDate(null);
+      updateDaysIndicator(null);
+    }
+
+    updateTitle();
+    updateCounter();
+    updateDetailsCounter();
+    loadSessions();
+    updateSyncStatusDisplay();
+
+    // Clean up backup
+    localStorage.removeItem(backupKey);
+
+    console.log("SSTT: Sync undone, previous state restored");
+  }
+  // ===== END SYNC BANNER AND DIFF MODAL =====
+
+
+
+
+
+  // ===== INITIAL DATA LOADING =====
+  // ===== INITIAL DATA LOADING =====
+  // Check for cross-device sync (detects and shows banner, never auto-imports)
+  syncFromUrlIfNewer();
+
+  // Get URL parameters (but NEVER auto-import from same machine)
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // Only use URL parameters for initial data if this is a BRAND NEW window
+  // (no stored data at all)
   const storedTitle = localStorage.getItem(TITLE_STORAGE_KEY);
   const storedDetails = localStorage.getItem(DETAILS_STORAGE_KEY);
   const storedDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
 
-  // Priority: URL params (only if shouldUseUrlParams is true) > localStorage > empty
-  const initialTitle = (urlTitle || storedTitle || '');
-  const initialDetails = (urlDetails || storedDetails || '');
-  const initialDueDate = (urlDueDate || storedDueDate || '');
 
-  // Load initial title data
+
+  let initialTitle = storedTitle || '';
+  let initialDetails = storedDetails || '';
+  let initialDueDate = storedDueDate || '';
+
+  // Only load from URL if this is a new window OR localStorage is completely empty
+  const isFreshWindow = !storedTitle && !storedDetails;
+  const isStorageEmpty = localStorage.length === 0 ||
+    (!storedTitle && !storedDetails && !storedDueDate);
+
+  if (isFreshWindow || isStorageEmpty) {
+    const urlTitle = urlParams.get('title');
+    const urlDetails = urlParams.get('details');
+    const urlDueDate = urlParams.get('dueDate');
+
+    if (urlTitle) initialTitle = urlTitle;
+    if (urlDetails) initialDetails = urlDetails;
+    if (urlDueDate) initialDueDate = urlDueDate;
+
+    if (urlTitle || urlDetails) {
+      console.log("SSTT: New/empty window - loading from URL parameters");
+    }
+  } else {
+    console.log("SSTT: Existing window - using localStorage");
+  }
+
+  // Load initial data into UI
   if (initialTitle) {
     titleTextarea.value = initialTitle;
     updateTitle();
     updateCounter();
-
-    // Only update storage if we actually used URL params
-    if (shouldUseUrlParams && urlTitle && urlTitle !== storedTitle) {
-      localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
-    }
+    localStorage.setItem(TITLE_STORAGE_KEY, initialTitle);
   }
 
-  // Load initial details data
   if (initialDetails) {
     detailsTextarea.value = initialDetails;
     updateDetailsCounter();
     autoExpand(detailsTextarea);
-
-    if (shouldUseUrlParams && urlDetails && urlDetails !== storedDetails) {
-      localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
-    }
+    localStorage.setItem(DETAILS_STORAGE_KEY, initialDetails);
   }
 
-  // Load initial due date
-  if (initialDueDate) {
+  if (initialDueDate && initialDueDate !== '0') {
     dueDateInput.value = initialDueDate;
-
-    // Set Pikaday's internal state
     const [year, month, day] = initialDueDate.split('-').map(Number);
     const dueDateForPicker = new Date(year, month - 1, day);
     datePicker.setDate(dueDateForPicker);
     updateDaysIndicator(dueDateForPicker);
-
-    if (shouldUseUrlParams && urlDueDate && urlDueDate !== storedDueDate) {
-      saveDueDate(initialDueDate);
-    }
+    localStorage.setItem(DUE_DATE_STORAGE_KEY, initialDueDate);
   }
 
-  // Finalize URL with loaded data (this will overwrite any manually changed URL params)
+  // Finalize URL with loaded data
   updateURL(initialTitle, initialDetails);
-
 
   // Check if we're on Stackedit or on out Live-Page 
   const isOnProduction = window.location.hostname.includes('stefanibus.github.io')

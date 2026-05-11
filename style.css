@@ -544,7 +544,39 @@ textarea::placeholder {
   color: #721c24;
 }
 
-/* Add to your CSS */
+
+/* Sync Banner and Modal Styles */
+#syncBanner button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  transition: all 0.2s;
+}
+
+#syncDiffModal button:hover {
+  opacity: 0.9;
+  transition: all 0.2s;
+}
+
+#undoBanner button:hover {
+  opacity: 0.9;
+}
+
+/* Make scrollbars nicer */
+#syncDiffModal div[style*="overflow: auto"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+#syncDiffModal div[style*="overflow: auto"]::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+#syncDiffModal div[style*="overflow: auto"]::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
 .storage-warning {
   background: #fff3cd !important;
   border: 1px solid #ffeaa7 !important;
