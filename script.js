@@ -566,6 +566,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Skip if already importing to prevent loops
     if (isImporting) return false;
 
+    // === NEW: Validate local MID exists (recovery only, no overwrite) ===
+    let localMid = localStorage.getItem(MACHINE_ID_KEY);
+    if (!localMid) {
+      // This shouldn't happen, but recover if it does
+      console.warn("SSTT: MID missing! Recovering...");
+      localMid = 'mid_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem(MACHINE_ID_KEY, localMid);
+    }
+    // IMPORTANT: Do NOT "fix" mismatched MIDs here - that would break cross-device sync!
+    // Different MIDs on different devices is CORRECT behavior.
+
     const urlParams = new URLSearchParams(window.location.search);
     const urlWinId = urlParams.get('win');
     const urlMid = urlParams.get('mid');
@@ -596,11 +607,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // URL data is newer from another machine → IMPORT
     if (urlTs > localSyncTs) {
       isImporting = true;
+
+      console.log(`🔄 SSTT: Importing cross-device data - URL parameters from ${urlMid} (${new Date(urlTs).toLocaleString()}) are newer than local (${new Date(localSyncTs).toLocaleString()})`);
       console.log(`SSTT: Importing newer data from ${urlMid} (URL TS: ${urlTs} > Local TS: ${localSyncTs})`);
 
       // === NEW: Record last sync info BEFORE importing ===
       localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, urlTs.toString());
       localStorage.setItem(LAST_SYNC_MACHINE_KEY, urlMid);
+      // === CRITICAL: Do NOT overwrite local MID! ===
+      // The MID is per-device and should never be imported from URL
+      // (Nothing to add here - just confirming we NEVER touch MACHINE_ID_KEY during import)
+
 
       // === IMPORT DATA TO LOCALSTORAGE ===
       if (urlTitle) {
@@ -650,7 +667,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // URL data is older than local → Warning
     else if (urlTs < localSyncTs && urlTs !== 0) {
-      console.warn(`SSTT: URL data is older (${urlTs} < ${localSyncTs}) - keeping local`);
+      console.warn(`⚠️ SSTT: URL data is older (${new Date(urlTs).toLocaleString()}) - keeping local data (${new Date(localSyncTs).toLocaleString()})`);
+      // console.warn(`SSTT: URL data is older (${urlTs} < ${localSyncTs}) - keeping local`);
       alert(`ℹ️ Sync Info: This URL contains older data (from ${new Date(urlTs).toLocaleString()})\n\nYour local data (from ${new Date(localSyncTs).toLocaleString()}) is newer and was kept.`);
     }
 
@@ -690,8 +708,6 @@ document.addEventListener('DOMContentLoaded', function () {
     urlDetails = urlParams.get('details');
     urlDueDate = urlParams.get('dueDate');
     console.log("SSTT: Using URL parameters for initial data load");
-  } else {
-    console.log("SSTT: Using only localStorage (URL parameters ignored for same-machine)");
   }
 
   // Fall back to localStorage if no URL params
@@ -1531,6 +1547,17 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ===== UTILITY FUNCTIONS =====
+
+
+  // ===== RESET MACHINE ID (for troubleshooting) =====
+  window.resetMachineId = function () {
+    if (confirm("Reset your device ID?\n\nThis will generate a new unique ID for this browser.\nYour tasks will NOT be affected.\n\nCross-device sync will work normally after reset.")) {
+      localStorage.removeItem(MACHINE_ID_KEY);
+      alert("Device ID reset. The page will now reload.");
+      location.reload();
+    }
+  };
+
 
   // Escape text for use in JavaScript string literals
   function escapeHtmlForJsString(text) {
