@@ -591,6 +591,27 @@ document.addEventListener('DOMContentLoaded', function () {
     // Only proceed if URL has a different machine ID
     if (!urlMid || urlMid === myMachineId) return false;
 
+    // === NEW: Check if content is actually different ===
+    const currentTitle = localStorage.getItem(TITLE_STORAGE_KEY) || '';
+    const currentDetails = localStorage.getItem(DETAILS_STORAGE_KEY) || '';
+    const currentDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY) || '';
+
+    const urlTitleValue = urlTitle || '';
+    const urlDetailsValue = urlDetails || '';
+    const urlDueDateValue = urlDueDate || '';
+
+    const contentIsSame =
+      currentTitle === urlTitleValue &&
+      currentDetails === urlDetailsValue &&
+      currentDueDate === urlDueDateValue;
+
+    if (contentIsSame) {
+      console.log("SSTT: Content identical, ignoring newer timestamp from other device");
+      // Still update the sync timestamp to prevent repeated checks
+      localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
+      return false;
+    }
+    // === END CONTENT COMPARISON ===
     // Get local data for comparison
     const localTitle = localStorage.getItem(TITLE_STORAGE_KEY) || '';
     const localDetails = localStorage.getItem(DETAILS_STORAGE_KEY) || '';
@@ -798,6 +819,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function performSync(data) {
     isImporting = true;
+
+    // Update sync timestamps to match imported data (prevents ping-pong)
+    localStorage.setItem(SYNC_TS_STORAGE_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_MACHINE_KEY, data.urlMid);
 
     // Backup current state before import
     const backupKey = `${TITLE_STORAGE_KEY}_backup`;
