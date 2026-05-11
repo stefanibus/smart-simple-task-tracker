@@ -524,6 +524,11 @@ textarea::placeholder {
   background: #f0f0f0;
 }
 
+#showSyncDetails:hover {
+  background: #dee2e6 !important;
+  transform: translateY(-1px);
+}
+
 .sync-status.synced {
   background: #d4edda;
   color: #155724;
@@ -710,7 +715,7 @@ textarea::placeholder {
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 20px;
 }
 
 #docsModal {

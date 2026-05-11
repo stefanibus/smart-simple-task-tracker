@@ -916,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }, TIMEOUTS.BACKGROUND_REFRESH);
 
   // Initial load of sessions
-  loadSessions();
+  loadSessions(); // stefano search for String "perhapsDuplcate" 
 
   // Manual refresh button
   manualRefreshBtn.addEventListener('click', function () {
@@ -1113,11 +1113,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       return;
     }
-    // Sort sessions by last updated timestamp (newest first)
-    // STEFANO?  sessions.sort((a, b) => b.lastUpdated - a.lastUpdated); 
-    // sort by title
-    // sessions.sort((a, b) => a.title.localeCompare(b.title));
-
 
     let html = '';
 
@@ -1599,7 +1594,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // Initial load of sessions
-  loadSessions();
+  loadSessions(); // stefano search for String "perhapsDuplcate"
 
   // Update sync status display
   updateSyncStatusDisplay();
@@ -1612,7 +1607,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // This must be after all DOM elements are fully loaded
   updateLastBackupDisplay();
 
+  // checkStorageRegularly 
+  checkStorageRegularly();
 
+  // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
+  updateLastBackupDisplay();
 
   // Optional: Clear sync history for this task
   function clearSyncHistory() {
@@ -1622,7 +1621,92 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log("SSTT: Sync history cleared");
   }
 
-});
+  // ===== MODAL SYNC DETAILS TOGGLE =====
+
+  function updateModalSyncStatus() {
+    const syncStatusElement = document.getElementById('modalSyncStatus');
+    const detailsElement = document.getElementById('syncDetails');
+
+    if (!syncStatusElement) return;
+
+    const lastSync = localStorage.getItem(LAST_SYNC_TIMESTAMP_KEY);
+    const machineId = localStorage.getItem(MACHINE_ID_KEY);
+
+    if (!lastSync) {
+      syncStatusElement.innerHTML = '<span style="color: #6c757d;">📡 No cross-device sync yet</span>';
+    } else {
+      const syncDate = new Date(parseInt(lastSync));
+      const daysSinceSync = (Date.now() - parseInt(lastSync)) / (1000 * 60 * 60 * 24);
+      let statusColor = '#28a745'; // green
+      if (daysSinceSync > 7) statusColor = '#dc3545'; // red
+      else if (daysSinceSync > 1) statusColor = '#ffc107'; // yellow
+
+      syncStatusElement.innerHTML = `<span style="color: ${statusColor}; font-weight: 500;">${syncDate.toLocaleString()} (${Math.round(daysSinceSync)} days ago)</span>`;
+    }
+
+    if (detailsElement && machineId) {
+      const lastSync = localStorage.getItem(LAST_SYNC_TIMESTAMP_KEY);
+      detailsElement.innerHTML = `
+        <div style="display: grid; gap: 8px;">
+          <div><strong>🔧 Device ID:</strong> <code style="background: #f1f3f4; padding: 2px 6px; border-radius: 4px;">${machineId.substring(0, 12)}...</code></div>
+          <div><strong>📋 Sync Rules:</strong></div>
+          <ul style="margin: 0 0 0 20px; padding: 0;">
+            <li>✓ Different device + newer timestamp → <strong style="color: #28a745;">Auto-import</strong></li>
+            <li>✗ Different device + older timestamp → <strong style="color: #ffc107;">Warning, keep local</strong></li>
+            <li>= Same device → <strong style="color: #6c757d;">URL ignored (localStorage is source of truth)</strong></li>
+          </ul>
+          <div><strong>🔄 Last sync:</strong> ${lastSync ? new Date(parseInt(lastSync)).toLocaleString() : 'Never'}</div>
+          <div><strong>⚠️ Troubleshooting:</strong></div>
+          <ul style="margin: 0 0 0 20px; padding: 0;">
+            <li>"WinID mismatch" → URL belongs to different task window</li>
+            <li>"Older data" warning → Other device has newer unsynced changes</li>
+            <li>No sync indicator → Perform first cross-device sync</li>
+          </ul>
+          <div style="font-size: 10px; color: #6c757d; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9ecef;">
+            SSTT v1.3 | <a href="https://github.com/stefanibus/smart-simple-task-tracker" target="_blank" style="color: #4a6fa5;">GitHub Repository</a>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Toggle button text when clicked
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('#showSyncDetails');
+    if (btn) {
+      const details = document.getElementById('syncDetails');
+      if (details) {
+        const isHidden = details.style.display === 'none';
+        details.style.display = isHidden ? 'block' : 'none';
+        btn.textContent = isHidden ? '🔧 Hide technical details' : '📋 Show technical details';
+      }
+    }
+  });
+
+
+
+  // Update modal status when sessions load (override without breaking)
+  const originalLoadSessions = loadSessions;
+  loadSessions = function () {
+    originalLoadSessions();
+    updateModalSyncStatus();
+  };
+
+  // Initial update
+  updateModalSyncStatus();
+  // ===== END MODAL SYNC DETAILS TOGGLE =====
+
+}); // ← DOMContentLoaded ends here
+
+
+
+// Optional: Clear sync history for this task
+function clearSyncHistory() {
+  localStorage.removeItem(LAST_SYNC_TIMESTAMP_KEY);
+  localStorage.removeItem(LAST_SYNC_MACHINE_KEY);
+  updateSyncStatusDisplay();
+  console.log("SSTT: Sync history cleared");
+}
 
 // ===== MODAL FUNCTIONALITY START =====
 const docsToggle = document.getElementById('docsToggle');
@@ -1647,4 +1731,3 @@ if (docsToggle && docsModal) {
   });
 }
 // ===== MODAL FUNCTIONALITY END =====
-

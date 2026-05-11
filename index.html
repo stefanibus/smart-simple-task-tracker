@@ -108,11 +108,33 @@
 
 
 
-
   <!-- Documentation Modal START -->
   <div id="docsModal" style="display: none">
     <div class="docs-container">
-      <h1>🚀 Smart Task Tracker (STT)</h1>
+      <h1>🚀 Smart Simple Task Tracker (SSTT) <span style="font-size: 14px;">v1.3</span></h1>
+      <!-- ONE unified sync documentation block -->
+
+      <!-- Sync Status Section - Improved Design -->
+      <div
+        style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px; margin: 15px 0; border-left: 4px solid #4a6fa5;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">🔄</span>
+            <span style="font-weight: 600; font-size: 14px;">Sync Status:</span>
+            <span id="modalSyncStatus" style="font-size: 13px; color: #2c3e50;">Loading...</span>
+          </div>
+          <button id="showSyncDetails"
+            style="background: #e9ecef; border: 1px solid #ced4da; border-radius: 6px; padding: 4px 12px; font-size: 12px; cursor: pointer; color: #4a6fa5; transition: all 0.2s;">
+            📋 Show technical details
+          </button>
+        </div>
+
+        <div id="syncDetails"
+          style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 12px; color: #495057;">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
       <p class="center-text">
         <strong>Single-Topic-Taskpage System for Focused Work</strong>
       </p>
@@ -351,6 +373,12 @@
       id="closeButton">
       X
     </button>
+
+    <div
+      style="font-size: 10px; color: #999; text-align: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 8px;">
+      SSTT v1.3 | Cross-device sync | <a href="https://github.com/stefanibus/smart-simple-task-tracker"
+        target="_blank">GitHub</a>
+    </div>
   </div>
   <!-- Documentation Modal END -->
 
