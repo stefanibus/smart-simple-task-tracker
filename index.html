@@ -46,33 +46,35 @@
             <span class="sort-btn" data-sort="title" title="Sort alphabetically by title">🔤</span>
           </span>
         </h3>
-        <div class="refresh-status">
-          <span id="lastRefreshTime">Just now</span>
-          • <button id="manualRefresh" class="refresh-btn">↻ Refresh</button>
-        </div>
+        <div class="sync-status" id="syncStatusIndicator" style="font-size: 12px; margin-top: 5px; color: #666;"></div>
       </div>
-
-      <div class="session-list" id="sessionList">
-        <div class="no-sessions">No other task sessions found</div>
-        <!-- Three sections will be inserted here by JavaScript -->
-      </div>
-
-      <!-- Backup Section -->
-      <div class="backup-section">
-        <h4>Data Backup</h4>
-        <p>
-          Save your tasks to a file for backup or transfer between devices.
-        </p>
-
-        <div class="backup-buttons">
-          <button class="backup-btn save" id="saveBackup">Save Backup</button>
-          <button class="backup-btn" id="loadBackup">Load Backup</button>
-          <input type="file" id="backupFile" accept=".json" style="display: none" />
-        </div>
-
-        <div class="backup-status" id="backupStatus">Backup-Status</div>
+      <div class="refresh-status">
+        <span id="lastRefreshTime">Just now</span>
+        • <button id="manualRefresh" class="refresh-btn">↻ Refresh</button>
       </div>
     </div>
+
+    <div class="session-list" id="sessionList">
+      <div class="no-sessions">No other task sessions found</div>
+      <!-- Three sections will be inserted here by JavaScript -->
+    </div>
+
+    <!-- Backup Section -->
+    <div class="backup-section">
+      <h4>Data Backup</h4>
+      <p>
+        Save your tasks to a file for backup or transfer between devices.
+      </p>
+
+      <div class="backup-buttons">
+        <button class="backup-btn save" id="saveBackup">Save Backup</button>
+        <button class="backup-btn" id="loadBackup">Load Backup</button>
+        <input type="file" id="backupFile" accept=".json" style="display: none" />
+      </div>
+
+      <div class="backup-status" id="backupStatus">Backup-Status</div>
+    </div>
+  </div>
   </div>
 
   <!-- Documentation Modal Toggle Button -->
