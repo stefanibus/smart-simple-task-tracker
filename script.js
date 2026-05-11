@@ -562,7 +562,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ===== CROSS-DEVICE SYNC REFEREE =====
-  // ===== CROSS-DEVICE SYNC REFEREE =====
   function syncFromUrlIfNewer() {
     // Skip if already importing to prevent loops
     if (isImporting) return false;
@@ -578,24 +577,24 @@ document.addEventListener('DOMContentLoaded', function () {
     // CRITICAL: WinID must match current window
     if (urlWinId && urlWinId !== getSafeWinID(windowId)) {
       console.warn(`SSTT: WinID mismatch! URL: ${urlWinId}, Current: ${getSafeWinID(windowId)}`);
-      console.warn(`SSTT: WinID mismatch! URL: ${urlWinId}, Current: ${getSafeWinID(windowId)}`);
       return false;
     }
 
     // If URL has NO win parameter, this is a fresh page - no sync needed
     if (!urlWinId) {
-      console.log("SSTT: Fresh page with no URL parameters - skipping sync");
       return false;
     }
 
     // Only proceed if URL has a different machine ID
     if (!urlMid || urlMid === myMachineId) return false;
 
-    // === NEW: Check if content is actually different ===
+    // Get local data for comparison
     const currentTitle = localStorage.getItem(TITLE_STORAGE_KEY) || '';
     const currentDetails = localStorage.getItem(DETAILS_STORAGE_KEY) || '';
     const currentDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY) || '';
+    const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
 
+    // === CONTENT COMPARISON (prevents ping-pong loops) ===
     const urlTitleValue = urlTitle || '';
     const urlDetailsValue = urlDetails || '';
     const urlDueDateValue = urlDueDate || '';
@@ -606,380 +605,123 @@ document.addEventListener('DOMContentLoaded', function () {
       currentDueDate === urlDueDateValue;
 
     if (contentIsSame) {
-      console.log("SSTT: Content identical, ignoring newer timestamp from other device");
-      // Still update the sync timestamp to prevent repeated checks
+      // Update timestamp to prevent future unnecessary checks
       localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
       return false;
     }
     // === END CONTENT COMPARISON ===
-    // Get local data for comparison
-    const localTitle = localStorage.getItem(TITLE_STORAGE_KEY) || '';
-    const localDetails = localStorage.getItem(DETAILS_STORAGE_KEY) || '';
-    const localDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY) || '';
-    const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
 
-    // Check if content is actually different
-    const contentSame = (urlTitle === localTitle) && (urlDetails === localDetails) && (urlDueDate === localDueDate);
+    // URL data is newer from another machine → AUTO-IMPORT
+    if (urlTs > localSyncTs) {
+      isImporting = true;
+      console.log(`SSTT: Auto-importing from ${urlMid} (${new Date(urlTs).toLocaleString()})`);
 
-    if (contentSame) {
-      console.log("SSTT: URL and local content are identical - no sync needed");
-      return false;
+      // Record last sync info
+      localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, urlTs.toString());
+      localStorage.setItem(LAST_SYNC_MACHINE_KEY, urlMid);
+
+      // Import data
+      if (urlTitle) {
+        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
+        localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
+        titleTextarea.value = urlTitle;
+        updateTitle();
+        updateCounter();
+      }
+
+      if (urlDetails) {
+        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
+        localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
+        detailsTextarea.value = urlDetails;
+        updateDetailsCounter();
+        autoExpand(detailsTextarea);
+      }
+
+      if (urlDueDate && urlDueDate !== '0') {
+        localStorage.setItem(DUE_DATE_STORAGE_KEY, urlDueDate);
+        dueDateInput.value = urlDueDate;
+        const [year, month, day] = urlDueDate.split('-').map(Number);
+        const dueDateForPicker = new Date(year, month - 1, day);
+        datePicker.setDate(dueDateForPicker);
+        updateDaysIndicator(dueDateForPicker);
+      }
+
+      // Update sync timestamp
+      localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
+
+      // Refresh UI
+      loadSessions();
+      updateSyncStatusDisplay();
+
+      setTimeout(() => {
+        isImporting = false;
+      }, 500);
+
+      return true;
+    }
+    // URL data is older than local → Warning (console only)
+    else if (urlTs < localSyncTs && urlTs !== 0) {
+      console.warn(`SSTT: URL data is older (${new Date(urlTs).toLocaleString()}) - keeping local`);
     }
 
-    // Show sync notification banner (never auto-import)
-    showSyncBanner({
-      urlMid: urlMid,
-      urlTs: urlTs,
-      urlTitle: urlTitle,
-      urlDetails: urlDetails,
-      urlDueDate: urlDueDate,
-      localTitle: localTitle,
-      localDetails: localDetails,
-      localDueDate: localDueDate,
-      localSyncTs: localSyncTs
-    });
-
-    return false; // Never auto-import
+    return false;
   }
   // ===== END SYNC REFEREE =====
 
 
 
 
-  // ===== SYNC BANNER AND DIFF MODAL =====
-  let syncBannerElement = null;
-
-  //  here 
-  function showDiffModal(data) {
-    // Remove existing modal if present
-    const existingModal = document.getElementById('syncDiffModal');
-    if (existingModal) existingModal.remove();
-
-    // Create modal overlay
-    const modal = document.createElement('div');
-    modal.id = 'syncDiffModal';
-    modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;  `;
-
-    const localTitle = data.localTitle || '(empty)';
-    const localDetails = data.localDetails || '(empty)';
-    const remoteTitle = data.urlTitle || '(empty)';
-    const remoteDetails = data.urlDetails || '(empty)';
-    const remoteDate = new Date(data.urlTs).toLocaleString();
-
-    const localDueDate = data.localDueDate || '(none)';
-    const remoteDueDate = data.urlDueDate || '(none)';
-    const dueDateSame = localDueDate === remoteDueDate;
-
-    modal.innerHTML = `
-    <div style="background: white; border-radius: 12px; max-width: 95vw; max-height: 90vh; overflow: auto; padding: 20px; width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
-        <h3 style="margin: 0;">📋 Compare Versions</h3>
-        <button id="closeModalBtn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999;">&times;</button>
-      </div>
-      
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <!-- Local Version -->
-        <div style="flex: 1; min-width: 250px;">
-          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-            <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">💻 Current (This Device)</div>
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
-              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(localTitle)}</div>
-            </div>
-            <div>
-              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
-              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(localDetails)}</div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Remote Version -->
-        <div style="flex: 1; min-width: 250px;">
-          <div style="background: #e8f5e8; border-radius: 8px; padding: 12px;">
-            <div style="font-weight: bold; color: #2e7d32; margin-bottom: 8px;">🌐 Other Device (${remoteDate})</div>
-            <div style="margin-bottom: 12px;">
-              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Title:</div>
-              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word;">${escapeHtml(remoteTitle)}</div>
-            </div>
-            <div>
-              <div style="font-size: 12px; color: #666; margin-bottom: 4px;">Details:</div>
-              <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow: auto;">${escapeHtml(remoteDetails)}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Due Date Section - NOW INSIDE THE MODAL (before buttons) -->
-      <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee;">
-        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">📅 Due Date:</div>
-        <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
-          ${dueDateSame ?
-        `<span>${escapeHtml(localDueDate)}</span>` :
-        `<span style="background: #ffe6e6; padding: 2px 4px; border-radius: 3px;">${escapeHtml(localDueDate)}</span>
-             <span style="color: #666;"> → </span>
-             <span style="background: #e6ffe6; padding: 2px 4px; border-radius: 3px;">${escapeHtml(remoteDueDate)}</span>`
-      }
-        </div>
-      </div>
-      
-      <!-- Buttons -->
-      <div style="margin-top: 20px; padding-top: 12px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">
-        <button id="modalImportBtn" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">📥 Import This Version</button>
-        <button id="modalCloseBtn" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Close</button>
-      </div>
-    </div>  `;
-
-    document.body.appendChild(modal);
-
-    // Close modal handlers
-    const closeModal = () => modal.remove();
-    document.getElementById('closeModalBtn').onclick = closeModal;
-    document.getElementById('modalCloseBtn').onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-
-    // Import from modal
-    document.getElementById('modalImportBtn').onclick = () => {
-      closeModal();
-      confirmImport(data);
-    };
-  }
-
-
-  function confirmImport(data) {
-    const remoteDate = new Date(data.urlTs).toLocaleString();
-    const remoteShortMid = data.urlMid.substring(0, 12) + '...';
-
-    const userConfirmed = confirm(
-      `Import data from other device?\n\n` +
-      `From: ${remoteShortMid}\n` +
-      `Date: ${remoteDate}\n\n` +
-      `Current data will be backed up in case you want to undo.\n\n` +
-      `Click OK to import, Cancel to keep current.`
-    );
-
-    if (userConfirmed) {
-      performSync(data);
-    }
-  }
-
-  function performSync(data) {
-    isImporting = true;
-
-    // Update sync timestamps to match imported data (prevents ping-pong)
-    localStorage.setItem(SYNC_TS_STORAGE_KEY, data.urlTs.toString());
-    localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, data.urlTs.toString());
-    localStorage.setItem(LAST_SYNC_MACHINE_KEY, data.urlMid);
-
-    // Backup current state before import
-    const backupKey = `${TITLE_STORAGE_KEY}_backup`;
-    localStorage.setItem(backupKey, JSON.stringify({
-      title: localStorage.getItem(TITLE_STORAGE_KEY) || '',
-      details: localStorage.getItem(DETAILS_STORAGE_KEY) || '',
-      dueDate: localStorage.getItem(DUE_DATE_STORAGE_KEY) || '',
-      timestamp: Date.now()
-    }));
-
-    // Import URL data to localStorage
-    if (data.urlTitle !== undefined && data.urlTitle !== null) {
-      localStorage.setItem(TITLE_STORAGE_KEY, data.urlTitle);
-      localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
-      titleTextarea.value = data.urlTitle;
-    }
-
-    if (data.urlDetails !== undefined && data.urlDetails !== null) {
-      localStorage.setItem(DETAILS_STORAGE_KEY, data.urlDetails);
-      localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
-      detailsTextarea.value = data.urlDetails;
-      autoExpand(detailsTextarea);
-    }
-
-    if (data.urlDueDate && data.urlDueDate !== '0') {
-      localStorage.setItem(DUE_DATE_STORAGE_KEY, data.urlDueDate);
-      dueDateInput.value = data.urlDueDate;
-      const [year, month, day] = data.urlDueDate.split('-').map(Number);
-      const dueDateForPicker = new Date(year, month - 1, day);
-      datePicker.setDate(dueDateForPicker);
-      updateDaysIndicator(dueDateForPicker);
-    }
-
-    // Update sync timestamp
-    localStorage.setItem(SYNC_TS_STORAGE_KEY, data.urlTs.toString());
-    localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, data.urlTs.toString());
-    localStorage.setItem(LAST_SYNC_MACHINE_KEY, data.urlMid);
-
-    // Update UI
-    updateTitle();
-    updateCounter();
-    updateDetailsCounter();
-    loadSessions();
-    updateSyncStatusDisplay();
-
-    // Show undo option for 10 seconds
-    showUndoNotification();
-
-    // Remove banner if present
-    if (syncBannerElement) {
-      syncBannerElement.remove();
-      syncBannerElement = null;
-    }
-
-    isImporting = false;
-    console.log("SSTT: Sync import completed");
-  }
-
-  function showUndoNotification() {
-    const undoBanner = document.createElement('div');
-    undoBanner.id = 'undoBanner';
-    undoBanner.style.cssText = `
-      position: sticky;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #d4edda;
-      border-bottom: 3px solid #28a745;
-      padding: 10px 16px;
-      z-index: 1001;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-family: inherit;
-    `;
-
-    undoBanner.innerHTML = `
-      <span>✅ Sync completed! Data imported from other device.</span>
-      <button id="undoSyncBtn" style="background: #ffc107; color: #333; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">↩️ Undo</button>
-    `;
-
-    const container = document.querySelector('.container');
-    if (container && container.firstChild) {
-      container.insertBefore(undoBanner, container.firstChild);
-    }
-
-    document.getElementById('undoSyncBtn').onclick = () => {
-      undoLastSync();
-      undoBanner.remove();
-    };
-
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-      if (undoBanner.parentNode) undoBanner.remove();
-    }, 10000);
-  }
-
-  function undoLastSync() {
-    const backupKey = `${TITLE_STORAGE_KEY}_backup`;
-    const backupStr = localStorage.getItem(backupKey);
-
-    if (!backupStr) {
-      alert("No backup found to undo.");
-      return;
-    }
-
-    const backup = JSON.parse(backupStr);
-
-    // Restore from backup
-    localStorage.setItem(TITLE_STORAGE_KEY, backup.title);
-    localStorage.setItem(DETAILS_STORAGE_KEY, backup.details);
-    localStorage.setItem(DUE_DATE_STORAGE_KEY, backup.dueDate);
-    localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, backup.timestamp.toString());
-    localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, backup.timestamp.toString());
-
-    // Update UI
-    titleTextarea.value = backup.title;
-    detailsTextarea.value = backup.details;
-    dueDateInput.value = backup.dueDate;
-
-    if (backup.dueDate && backup.dueDate !== '0') {
-      const [year, month, day] = backup.dueDate.split('-').map(Number);
-      const dueDateForPicker = new Date(year, month - 1, day);
-      datePicker.setDate(dueDateForPicker);
-      updateDaysIndicator(dueDateForPicker);
-    } else {
-      datePicker.setDate(null);
-      updateDaysIndicator(null);
-    }
-
-    updateTitle();
-    updateCounter();
-    updateDetailsCounter();
-    loadSessions();
-    updateSyncStatusDisplay();
-
-    // Clean up backup
-    localStorage.removeItem(backupKey);
-
-    console.log("SSTT: Sync undone, previous state restored");
-  }
-  // ===== END SYNC BANNER AND DIFF MODAL =====
-
-
 
 
 
   // ===== INITIAL DATA LOADING =====
-  // ===== INITIAL DATA LOADING =====
-  // Check for cross-device sync (detects and shows banner, never auto-imports)
+  // Check for cross-device sync (auto-imports if needed)
   syncFromUrlIfNewer();
 
-  // Get URL parameters (but NEVER auto-import from same machine)
+  // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
 
-  // Only use URL parameters for initial data if this is a BRAND NEW window
-  // (no stored data at all)
+  // Load from localStorage (source of truth)
   const storedTitle = localStorage.getItem(TITLE_STORAGE_KEY);
   const storedDetails = localStorage.getItem(DETAILS_STORAGE_KEY);
   const storedDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY);
-
-
 
   let initialTitle = storedTitle || '';
   let initialDetails = storedDetails || '';
   let initialDueDate = storedDueDate || '';
 
-  // Only load from URL if this is a new window OR localStorage is completely empty
-  const isFreshWindow = !storedTitle && !storedDetails;
-  const isStorageEmpty = localStorage.length === 0 ||
-    (!storedTitle && !storedDetails && !storedDueDate);
+  // Only load from URL if localStorage is completely empty (brand new window)
+  const hasNoStoredData = !storedTitle && !storedDetails && !storedDueDate;
 
-  if (isFreshWindow || isStorageEmpty) {
+  if (hasNoStoredData) {
     const urlTitle = urlParams.get('title');
     const urlDetails = urlParams.get('details');
     const urlDueDate = urlParams.get('dueDate');
 
     if (urlTitle) initialTitle = urlTitle;
     if (urlDetails) initialDetails = urlDetails;
-    if (urlDueDate) initialDueDate = urlDueDate;
+    if (urlDueDate && urlDueDate !== '0') initialDueDate = urlDueDate;
 
     if (urlTitle || urlDetails) {
-      console.log("SSTT: New/empty window - loading from URL parameters");
+      console.log("SSTT: New window - loading from URL parameters");
+      // Save to localStorage
+      if (urlTitle) localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
+      if (urlDetails) localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
+      if (urlDueDate && urlDueDate !== '0') localStorage.setItem(DUE_DATE_STORAGE_KEY, urlDueDate);
     }
-  } else {
-    console.log("SSTT: Existing window - using localStorage");
   }
 
-  // Load initial data into UI
+  // Load into UI
   if (initialTitle) {
     titleTextarea.value = initialTitle;
     updateTitle();
     updateCounter();
-    localStorage.setItem(TITLE_STORAGE_KEY, initialTitle);
   }
 
   if (initialDetails) {
     detailsTextarea.value = initialDetails;
     updateDetailsCounter();
     autoExpand(detailsTextarea);
-    localStorage.setItem(DETAILS_STORAGE_KEY, initialDetails);
   }
 
   if (initialDueDate && initialDueDate !== '0') {
@@ -988,10 +730,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const dueDateForPicker = new Date(year, month - 1, day);
     datePicker.setDate(dueDateForPicker);
     updateDaysIndicator(dueDateForPicker);
-    localStorage.setItem(DUE_DATE_STORAGE_KEY, initialDueDate);
   }
 
-  // Finalize URL with loaded data
+  // Finalize URL
   updateURL(initialTitle, initialDetails);
 
   // Check if we're on Stackedit or on out Live-Page 
@@ -1872,13 +1613,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // ⭐ INITIALIZE BACKUP DISPLAY - MOVED TO END ⭐
   updateLastBackupDisplay();
 
-  // Optional: Clear sync history for this task
-  function clearSyncHistory() {
-    localStorage.removeItem(LAST_SYNC_TIMESTAMP_KEY);
-    localStorage.removeItem(LAST_SYNC_MACHINE_KEY);
-    updateSyncStatusDisplay();
-    console.log("SSTT: Sync history cleared");
-  }
 
   // ===== MODAL SYNC DETAILS TOGGLE =====
 
