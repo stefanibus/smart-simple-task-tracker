@@ -526,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== URL MANAGEMENT =====
   // Function to update browser URL with current state
   function updateURL(title, details, winId = null) {
-    
+
     // FALLBACK: Wenn Title leer, setze Platzhalter
     let safeTitle = title;
     if (!safeTitle || safeTitle.trim() === '') {
@@ -583,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ===== CROSS-DEVICE SYNC REFEREE =====
   function syncFromUrlIfNewer() {
- 
     const urlParams = new URLSearchParams(window.location.search);
     const urlWinId = urlParams.get('win');
     const urlMid = urlParams.get('mid');
@@ -594,11 +593,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('🔴 RAW urlDetails from URL:', urlParams.get('details'));
     console.log('🔴 DECODED urlDetails:', urlDetails);
-     
 
     // Skip if already importing to prevent loops
     if (isImporting) return false;
-
 
     // CRITICAL: WinID must match current window
     if (urlWinId && urlWinId !== getSafeWinID(windowId)) {
@@ -620,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const currentDueDate = localStorage.getItem(DUE_DATE_STORAGE_KEY) || '';
     const localSyncTs = parseInt(localStorage.getItem(SYNC_TS_STORAGE_KEY) || '0');
 
-    // === CONTENT COMPARISON (prevents ping-pong loops) ===
+    // === CONTENT COMPARISON ===
     const urlTitleValue = urlTitle || '';
     const urlDetailsValue = urlDetails || '';
     const urlDueDateValue = urlDueDate || '';
@@ -633,84 +630,34 @@ document.addEventListener('DOMContentLoaded', function () {
     if (contentIsSame) {
       // Update timestamp to prevent future unnecessary checks
       localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
+      console.log('SSTT: Content identical - no sync needed');
       return false;
     }
     // === END CONTENT COMPARISON ===
 
-    // URL data is newer from another machine → AUTO-IMPORT
-    if (urlTs > localSyncTs) {
+    // Unterschiedliche MID + unterschiedlicher Content → Zeige Diff-Modal
+    if (!contentIsSame) {
+      console.log(`SSTT: Unterschiedliche MID (${urlMid}) → Zeige Diff-Modal`);
 
-            // Innerhalb des Imports (wo urlTs > localSyncTs)
-      console.log('🔵 IMPORT TRIGGERED');
-      console.log('🔵 urlTitle:', urlTitle);
-      console.log('🔵 urlDetails:', urlDetails);
+      // Backup aktuellen Zustand (für Undo)
+      const backupKey = `${TITLE_STORAGE_KEY}_backup`;
+      localStorage.setItem(backupKey, JSON.stringify({
+        title: currentTitle,
+        details: currentDetails,
+        dueDate: currentDueDate,
+        timestamp: Date.now()
+      }));
 
-      if (urlTitle) {
-        console.log('🔵 SAVING TITLE:', urlTitle);
-        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
-        titleTextarea.value = urlTitle;
-        updateTitle();
-      }
-
-      if (urlDetails) {
-        console.log('🔵 SAVING DETAILS:', urlDetails);
-        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
-        detailsTextarea.value = urlDetails;
-        updateDetailsCounter();
-      } else {
-        console.log('🔵 WARNING: urlDetails is falsy!');
-      }
-
-
-      isImporting = true;
-      console.log(`SSTT: Auto-importing from ${urlMid} (${new Date(urlTs).toLocaleString()})`);
-
-      // Record last sync info
-      localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, urlTs.toString());
-      localStorage.setItem(LAST_SYNC_MACHINE_KEY, urlMid);
-
-      // Import data
-      if (urlTitle) {
-        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
-        localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
-        titleTextarea.value = urlTitle;
-        updateTitle();
-        updateCounter();
-      }
-
-      if (urlDetails) {
-        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
-        localStorage.setItem(`timestamp_${DETAILS_STORAGE_KEY}`, Date.now().toString());
-        detailsTextarea.value = urlDetails;
-        updateDetailsCounter();
-        autoExpand(detailsTextarea);
-      }
-
-      if (urlDueDate && urlDueDate !== '0') {
-        localStorage.setItem(DUE_DATE_STORAGE_KEY, urlDueDate);
-        dueDateInput.value = urlDueDate;
-        const [year, month, day] = urlDueDate.split('-').map(Number);
-        const dueDateForPicker = new Date(year, month - 1, day);
-        datePicker.setDate(dueDateForPicker);
-        updateDaysIndicator(dueDateForPicker);
-      }
-
-      // Update sync timestamp
-      localStorage.setItem(SYNC_TS_STORAGE_KEY, urlTs.toString());
-
-      // Refresh UI
-      loadSessions();
-      updateSyncStatusDisplay();
-
-      setTimeout(() => {
-        isImporting = false;
-      }, 500);
-
-      return true;
-    }
-    // URL data is older than local → Warning (console only)
-    else if (urlTs < localSyncTs && urlTs !== 0) {
-      console.warn(`SSTT: URL data is older (${new Date(urlTs).toLocaleString()}) - keeping local`);
+      showSyncDiffModal({
+        localTitle: currentTitle,
+        localDetails: currentDetails,
+        localDueDate: currentDueDate,
+        urlTitle: urlTitle,
+        urlDetails: urlDetails,
+        urlDueDate: urlDueDate,
+        urlMid: urlMid,
+        urlTs: urlTs
+      });
     }
 
     return false;
@@ -779,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const dueDateForPicker = new Date(year, month - 1, day);
     datePicker.setDate(dueDateForPicker);
     updateDaysIndicator(dueDateForPicker);
-  } 
+  }
 
   // Finalize URL
   updateURL(initialTitle, initialDetails);
@@ -804,7 +751,7 @@ document.addEventListener('DOMContentLoaded', function () {
       this.value = '(untitled)';
     }
 
-    
+
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
@@ -1627,6 +1574,99 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Auto-expand details textarea on load
   autoExpand(detailsTextarea);
+
+  // ===== DIFF MODAL FUNCTIONS =====
+  function showSyncDiffModal(data) {
+    // Entferne existierenden Modal
+    const existingModal = document.getElementById('syncDiffModal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'syncDiffModal';
+    modal.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); display: flex; justify-content: center;
+    align-items: center; z-index: 2000;
+  `;
+
+    const localTitle = data.localTitle || '(empty)';
+    const localDetails = data.localDetails || '(empty)';
+    const remoteTitle = data.urlTitle || '(empty)';
+    const remoteDetails = data.urlDetails || '(empty)';
+    const remoteDate = new Date(data.urlTs).toLocaleString();
+
+    modal.innerHTML = `
+    <div style="background: white; border-radius: 12px; max-width: 90vw; max-height: 85vh; overflow: auto; padding: 20px; width: 800px;">
+      <h3 style="margin: 0 0 16px 0;">📋 Sync Konflikt</h3>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; background: #f8f9fa; padding: 12px; border-radius: 8px;">
+          <strong>💻 Dieses Gerät</strong>
+          <div style="margin-top: 8px;"><strong>Titel:</strong><br>${escapeHtml(localTitle)}</div>
+          <div style="margin-top: 8px;"><strong>Details:</strong><br>${escapeHtml(localDetails.substring(0, 200))}</div>
+        </div>
+        <div style="flex: 1; background: #e8f5e8; padding: 12px; border-radius: 8px;">
+          <strong>🌐 Anderes Gerät (${remoteDate})</strong>
+          <div style="margin-top: 8px;"><strong>Titel:</strong><br>${escapeHtml(remoteTitle)}</div>
+          <div style="margin-top: 8px;"><strong>Details:</strong><br>${escapeHtml(remoteDetails.substring(0, 200))}</div>
+        </div>
+      </div>
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="keepLocalBtn" style="padding: 8px 16px; cursor: pointer;">📁 Lokal behalten</button>
+        <button id="importRemoteBtn" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">📥 Von anderem Gerät importieren</button>
+      </div>
+    </div>
+  `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('keepLocalBtn').onclick = () => {
+      modal.remove();
+      console.log('SSTT: Lokale Daten behalten');
+    };
+
+    document.getElementById('importRemoteBtn').onclick = () => {
+      importFromUrl(data);
+      modal.remove();
+    };
+  }
+
+  function importFromUrl(data) {
+    console.log('SSTT: Importiere Daten von anderem Gerät');
+
+    if (data.urlTitle) {
+      localStorage.setItem(TITLE_STORAGE_KEY, data.urlTitle);
+      titleTextarea.value = data.urlTitle;
+      updateTitle();
+      updateCounter();
+    }
+
+    if (data.urlDetails) {
+      localStorage.setItem(DETAILS_STORAGE_KEY, data.urlDetails);
+      detailsTextarea.value = data.urlDetails;
+      updateDetailsCounter();
+      autoExpand(detailsTextarea);
+    }
+
+    if (data.urlDueDate && data.urlDueDate !== '0') {
+      localStorage.setItem(DUE_DATE_STORAGE_KEY, data.urlDueDate);
+      dueDateInput.value = data.urlDueDate;
+      const [year, month, day] = data.urlDueDate.split('-').map(Number);
+      datePicker.setDate(new Date(year, month - 1, day));
+      updateDaysIndicator(new Date(year, month - 1, day));
+    }
+
+    localStorage.setItem(SYNC_TS_STORAGE_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_TIMESTAMP_KEY, data.urlTs.toString());
+    localStorage.setItem(LAST_SYNC_MACHINE_KEY, data.urlMid);
+
+    loadSessions();
+    updateSyncStatusDisplay();
+    alert('✅ Daten wurden von anderem Gerät importiert');
+  }
+  // ===== END DIFF MODAL FUNCTIONS =====
+
+
+
 
   // Add this to your DOMContentLoaded event
   document.addEventListener('keydown', function (e) {
