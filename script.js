@@ -579,6 +579,9 @@ document.addEventListener('DOMContentLoaded', function () {
     window.history.replaceState({}, '', newURL);
     // Trigger sync for browser extensions etc.
     window.dispatchEvent(new Event('popstate'));
+
+
+
   }
 
   // ===== CROSS-DEVICE SYNC REFEREE =====
@@ -640,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function () {
       console.log(`SSTT: Unterschiedliche MID (${urlMid}) → Zeige Diff-Modal`);
 
       // Backup aktuellen Zustand (für Undo)
-      const backupKey = `${TITLE_STORAGE_KEY}_backup`;
+      const backupKey = `sstt_backup_${getSafeWinID(windowId)}`;
       localStorage.setItem(backupKey, JSON.stringify({
         title: currentTitle,
         details: currentDetails,
@@ -1661,6 +1664,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     loadSessions();
     updateSyncStatusDisplay();
+    
+    // ✅ HIER FEHLT: URL mit den neuen Daten aktualisieren
+    updateURL(data.urlTitle, data.urlDetails);
+    
     alert('✅ Daten wurden von anderem Gerät importiert');
   }
   // ===== END DIFF MODAL FUNCTIONS =====
