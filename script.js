@@ -584,6 +584,15 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== CROSS-DEVICE SYNC REFEREE =====
   function syncFromUrlIfNewer() {
  
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlWinId = urlParams.get('win');
+    const urlMid = urlParams.get('mid');
+    const urlTs = parseInt(urlParams.get('ts')) || 0;
+    const urlTitle = urlParams.get('title');
+    const urlDetails = urlParams.get('details');
+    const urlDueDate = urlParams.get('dueDate');
+
+    
         // In syncFromUrlIfNewer(), beim Import
     if (urlTitle) {
       let safeTitle = urlTitle.trim() !== '' ? urlTitle : '(untitled)';
@@ -597,13 +606,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Skip if already importing to prevent loops
     if (isImporting) return false;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlWinId = urlParams.get('win');
-    const urlMid = urlParams.get('mid');
-    const urlTs = parseInt(urlParams.get('ts')) || 0;
-    const urlTitle = urlParams.get('title');
-    const urlDetails = urlParams.get('details');
-    const urlDueDate = urlParams.get('dueDate');
 
     // CRITICAL: WinID must match current window
     if (urlWinId && urlWinId !== getSafeWinID(windowId)) {
