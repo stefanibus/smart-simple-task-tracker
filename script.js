@@ -526,6 +526,19 @@ document.addEventListener('DOMContentLoaded', function () {
   // ===== URL MANAGEMENT =====
   // Function to update browser URL with current state
   function updateURL(title, details, winId = null) {
+    
+    // FALLBACK: Wenn Title leer, setze Platzhalter
+    let safeTitle = title;
+    if (!safeTitle || safeTitle.trim() === '') {
+      safeTitle = '(untitled)';
+      // Auch im Textarea aktualisieren
+      if (titleTextarea && titleTextarea.value === '') {
+        titleTextarea.value = safeTitle;
+        updateTitle();
+        updateCounter();
+      }
+    }
+
     // Skip URL updates during import to prevent sync loops
     if (isImporting) return;
 
@@ -570,6 +583,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ===== CROSS-DEVICE SYNC REFEREE =====
   function syncFromUrlIfNewer() {
+ 
+        // In syncFromUrlIfNewer(), beim Import
+    if (urlTitle) {
+      let safeTitle = urlTitle.trim() !== '' ? urlTitle : '(untitled)';
+      localStorage.setItem(TITLE_STORAGE_KEY, safeTitle);
+      localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
+      titleTextarea.value = safeTitle;
+      updateTitle();
+      updateCounter();
+    }
+
     // Skip if already importing to prevent loops
     if (isImporting) return false;
 
@@ -737,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const dueDateForPicker = new Date(year, month - 1, day);
     datePicker.setDate(dueDateForPicker);
     updateDaysIndicator(dueDateForPicker);
-  }
+  } 
 
   // Finalize URL
   updateURL(initialTitle, initialDetails);
@@ -756,6 +780,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // console.log('Title input detected:', this.value); // console.log('WindowId:', windowId); // console.log('Storage key would be:', `pageTitle_${getSafeWinID(windowId)}`);
 
     if (isImporting) return;
+
+    // Verhindere leeren Title
+    if (this.value.trim() === '') {
+      this.value = '(untitled)';
+    }
+
+    
     // Clear any pending timers
     clearTimeout(debounceTimer);
     clearTimeout(keystrokeRefreshTimer);
