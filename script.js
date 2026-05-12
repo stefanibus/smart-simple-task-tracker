@@ -592,16 +592,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const urlDetails = urlParams.get('details');
     const urlDueDate = urlParams.get('dueDate');
 
-    
-        // In syncFromUrlIfNewer(), beim Import
-    if (urlTitle) {
-      let safeTitle = urlTitle.trim() !== '' ? urlTitle : '(untitled)';
-      localStorage.setItem(TITLE_STORAGE_KEY, safeTitle);
-      localStorage.setItem(`timestamp_${TITLE_STORAGE_KEY}`, Date.now().toString());
-      titleTextarea.value = safeTitle;
-      updateTitle();
-      updateCounter();
-    }
+    console.log('🔴 RAW urlDetails from URL:', urlParams.get('details'));
+    console.log('🔴 DECODED urlDetails:', urlDetails);
+     
 
     // Skip if already importing to prevent loops
     if (isImporting) return false;
@@ -646,6 +639,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // URL data is newer from another machine → AUTO-IMPORT
     if (urlTs > localSyncTs) {
+
+            // Innerhalb des Imports (wo urlTs > localSyncTs)
+      console.log('🔵 IMPORT TRIGGERED');
+      console.log('🔵 urlTitle:', urlTitle);
+      console.log('🔵 urlDetails:', urlDetails);
+
+      if (urlTitle) {
+        console.log('🔵 SAVING TITLE:', urlTitle);
+        localStorage.setItem(TITLE_STORAGE_KEY, urlTitle);
+        titleTextarea.value = urlTitle;
+        updateTitle();
+      }
+
+      if (urlDetails) {
+        console.log('🔵 SAVING DETAILS:', urlDetails);
+        localStorage.setItem(DETAILS_STORAGE_KEY, urlDetails);
+        detailsTextarea.value = urlDetails;
+        updateDetailsCounter();
+      } else {
+        console.log('🔵 WARNING: urlDetails is falsy!');
+      }
+
+
       isImporting = true;
       console.log(`SSTT: Auto-importing from ${urlMid} (${new Date(urlTs).toLocaleString()})`);
 
